@@ -1,0 +1,36 @@
+# Local development: `docker compose up`, then open http://localhost:5173
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: pantry
+      POSTGRES_PASSWORD: pantry
+      POSTGRES_DB: pantry
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pantry"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: { context: ./backend, dockerfile: Dockerfile.dev }
+    environment:
+      DATABASE_URL: postgresql+psycopg://pantry:pantry@db:5432/pantry
+    ports: ["8000:8000"]
+    volumes: ["./backend:/app"]
+    depends_on:
+      db: { condition: service_healthy }
+
+  web:
+    image: node:22-alpine
+    working_dir: /web
+    command: sh -c "npm install && npm run dev"
+    environment:
+      API_URL: http://api:8000
+    ports: ["5173:5173"]
+    volumes: ["./frontend:/web", "/web/node_modules"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
