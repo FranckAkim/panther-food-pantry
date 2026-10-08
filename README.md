@@ -8,7 +8,17 @@ CINS 5318 Software Engineering · Prairie View A&M University · Fall 2026 · Gr
 
 ## Architecture in one paragraph
 
-A **React single-page app** and a **FastAPI modular monolith** ship as **one Docker container** over **PostgreSQL**. The API lives under `/api`, the React app under `/`, so they share one origin and use an httpOnly session cookie. Code is split into modules (requests, inventory, distribution, reports) that share one database. The rule the whole design protects: **a lot's `qty_on_hand` is never negative and always equals the sum of its ledger entries.** Full rationale, the three rejected options and all diagrams: [`docs/architecture`](docs/architecture/README.md).
+A **React single-page app** and a **FastAPI modular monolith** ship as **one Docker container** over **PostgreSQL**. The API lives under `/api`, the React app under `/`, so they share one origin and use an httpOnly session cookie. Code is split into modules (requests, inventory, distribution, reports) that share one database. The rule the whole design protects: **a lot's `qty_on_hand` is never negative and always equals the sum of its ledger entries.** Full rationale, the three rejected options and all diagrams: [`docs/architecture`](docs/architecture/README.md) and the complete [design document](docs/architecture/design.md).
+
+## Project documents
+
+| Document | File |
+| --- | --- |
+| Project proposal | [docs/course/Project_Proposal.docx](docs/course/Project_Proposal.docx) |
+| Homework 2 — SE tools report | [docs/course/Homework2_SE_Tools_Report.pdf](docs/course/Homework2_SE_Tools_Report.pdf) |
+| Architecture design | [docs/architecture/design.md](docs/architecture/design.md) |
+| Architecture presentation | [docs/presentation/Panther_Food_Pantry_Architecture.pptx](docs/presentation/Panther_Food_Pantry_Architecture.pptx) |
+| Editable diagrams (draw.io) | [docs/architecture/diagrams/](docs/architecture/diagrams/) |
 
 ## Run it locally
 
