@@ -1,5 +1,10 @@
 # Panther Food Pantry Management System
 
+**Backend update (PFPMS-1–4):** Auth, profiles, role/access management and student
+request submission now use Supabase. See [setup and integration instructions](docs/supabase-backend.md).
+The FastAPI/Docker architecture below is the original scaffold; the team is moving
+to Supabase. Frontend screens still need to connect to the supplied integration helpers.
+
 A web application that replaces the university food pantry's paper forms and spreadsheets with one role-based system for **students**, **pantry staff** and **administrators**: assistance requests with pickup slots, inventory by lot and expiry date, donations, distributions and reports.
 
 CINS 5318 Software Engineering · Prairie View A&M University · Fall 2026 · Group project
