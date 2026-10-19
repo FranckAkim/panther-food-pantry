@@ -2,6 +2,33 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPantryApi } from '../src/lib/pantryApi.js';
 
+test('profile editing never sends student ID, even if supplied by a caller', async () => {
+  let payload;
+  const client = {
+    auth: { getUser: async () => ({ data: { user: { id: 'student' } } }) },
+    rpc: async () => ({ data: [{ role: 'student', enabled: true }] }),
+    from: () => ({
+      select: () => ({ eq: () => ({ single: async () => ({ data: {} }) }) }),
+      update: value => { payload = value; return { eq: () => ({ select: () => ({ single: async () => ({ data: {} }) }) }) }; },
+    }),
+  };
+  await createPantryApi(client).updateMyProfile({ displayName: 'Student', studentId: 'FORGED' });
+  assert.deepEqual(payload, { display_name: 'Student' });
+});
+test('student ID assignment requires an explicit identification check', async () => {
+  await assert.rejects(createPantryApi({}).setStudentId({ userId: 'student', studentId: 'P00012345' }), /physical/);
+});
+test('student ID helper calls the protected RPC and propagates authorization errors', async () => {
+  let call;
+  const api = createPantryApi({ rpc: async (name, args) => {
+    call = { name, args }; return { data: { student_id: 'P00012345' } };
+  } });
+  await api.setStudentId({ userId: 'student', studentId: 'P00012345', identificationChecked: true });
+  assert.deepEqual(call, { name: 'staff_set_student_id', args: { target: 'student', new_student_id: 'P00012345', identification_checked: true } });
+  const denied = createPantryApi({ rpc: async () => ({ error: new Error('Staff access required') }) });
+  await assert.rejects(denied.setStudentId({ userId: 'student', studentId: 'P00012345', identificationChecked: true }), /Staff/);
+});
+
 test('signed-out visitors have no current profile', async () => {
   const api = createPantryApi({ auth: { getUser: async () => ({ error: { name: 'AuthSessionMissingError' } }) } });
   assert.equal(await api.currentUser(), null);

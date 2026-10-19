@@ -39,11 +39,17 @@ export function createPantryApi(client) {
     },
     async signOut() { unwrap(await client.auth.signOut({ scope: 'local' })); },
     currentUser,
-    async updateMyProfile({ displayName, studentId }) {
+    async updateMyProfile({ displayName }) {
       const account = await currentUser();
       if (!account) throw new Error('Sign in first.');
-      return unwrap(await client.from('profiles').update({ display_name: displayName, student_id: studentId })
+      return unwrap(await client.from('profiles').update({ display_name: displayName })
         .eq('id', account.user.id).select().single());
+    },
+    async setStudentId({ userId, studentId, identificationChecked = false }) {
+      if (identificationChecked !== true) throw new Error('Check the physical student ID first.');
+      return unwrap(await client.rpc('staff_set_student_id', {
+        target: userId, new_student_id: studentId, identification_checked: true,
+      }));
     },
     async listUsers() { return unwrap(await client.rpc('admin_list_users')); },
     async provisionStaff({ email, displayName = '' }) {

@@ -39,7 +39,8 @@ const api = getPantryApi();
 await api.registerStudent({ email, password, displayName });
 await api.signIn({ email, password, workspace: 'student' }); // or staff/admin
 const account = await api.currentUser(); // user, profile, role
-await api.updateMyProfile({ displayName, studentId });
+await api.updateMyProfile({ displayName }); // users can edit only their own name
+await api.setStudentId({ userId, studentId, identificationChecked: true }); // staff/admin, after checking physical ID
 await api.submitRequest({ categories: ['Produce'], pickupNote: '' });
 await api.myRequests();
 await api.listUsers(); // admin only
@@ -68,7 +69,7 @@ Run `supabase/tests/access.sql` in SQL Editor. It creates temporary fixtures ins
 a transaction and rolls all changes back. Tests cover metadata role escalation,
 own-record access, admin operations, audit records, last-admin protection, staff
 access, disabled existing sessions, and anonymous denial. No real user data remains.
-Run helper tests with `node --test tests/*.test.js` from frontend (12 tests).
+Run helper tests with `node --test tests/*.test.js` from frontend (15 tests).
 Run `supabase/tests/inventory.sql` in SQL Editor for stock/availability policies.
 
 Live backend API tests passed with explicitly authorized temporary accounts:
@@ -125,9 +126,23 @@ inside the function. No service key is exposed to the client. An invite creates 
 unconfirmed account; only accepting it activates login. If role assignment fails,
 the endpoint reports incomplete provisioning rather than deleting an account.
 
-Cloud migration sources: `supabase/schema.sql`, `request_validation.sql`, and
-`inventory.sql`. Apply in that order to a fresh project. Do not rerun create-table
-scripts on the existing project; the changes are already deployed.
+Cloud schema sources: `supabase/schema.sql`, `request_validation.sql`, and
+`inventory.sql`. Apply in that order to a fresh project. The current schema includes
+the verified-student-ID fix. To upgrade an existing project created before that fix,
+apply `supabase/student_id_verification.sql` once; do not rerun `schema.sql`.
+The shared project already has the upgrade deployed.
+
+## Verified student IDs
+
+Students can update only `display_name`; direct `student_id` changes are denied at
+the database privilege level. Staff/admin use `staff_set_student_id` only after
+checking the physical ID, explicitly acknowledging the check. The database cannot
+perform that human verification itself. The operation trims and uppercases the ID,
+preserves uniqueness, and records actor, target, previous/new ID, verification
+acknowledgement and timestamp in `student_id_audit`, in the same transaction.
+Staff/admin can read the log; ordinary clients cannot insert, change or delete it.
+There is no automatic linking or merging of pantry history in this operation.
+Terminal action 15 provides this workflow. `updateMyProfile` never sends a student ID.
 
 References: https://supabase.com/docs/guides/auth/passwords and
 https://supabase.com/docs/guides/database/secure-data.

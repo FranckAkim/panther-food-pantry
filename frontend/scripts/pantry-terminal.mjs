@@ -51,7 +51,7 @@ try {
     console.log('1 Profile | 2 List items | 3 Add item | 4 Add lot | 5 Adjust stock');
     console.log('6 Availability | 7 List users | 8 Create staff invitation | 9 Edit item');
     console.log('10 Edit lot | 11 Submit food request | 12 My requests | 13 Set role/access');
-    console.log('14 Stock history | 0 Logout');
+    console.log('14 Stock history | 15 Verify student ID (staff/admin) | 0 Logout');
     for (;;) {
       const action = (await ask('Action: ')).trim();
       try {
@@ -73,6 +73,10 @@ try {
         else if (action === '12') display(await api.myRequests());
         else if (action === '13') { await api.setUserAccess({ userId: await ask('User UUID: '), role: await ask('Role [student/staff/admin]: '), enabled: (await ask('Enabled? [yes/no]: ')) === 'yes' }); console.log('Access updated.'); }
         else if (action === '14') display(await api.stockHistory(await ask('Lot UUID: ')));
+        else if (action === '15') display(await api.setStudentId({
+          userId: await ask('Student account UUID: '), studentId: await ask('Student ID number: '),
+          identificationChecked: (await ask('Have you checked this student’s physical ID? [yes/no]: ')).trim().toLowerCase() === 'yes',
+        }));
         else console.log('Choose one of the listed actions.');
       } catch (error) { console.error('Operation failed:', error.message); }
     }
