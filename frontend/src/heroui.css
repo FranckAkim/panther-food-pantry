@@ -1,0 +1,6 @@
+/* Keep the app's existing reset; load HeroUI's theme and utility styles. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@plugin '../hero.js';
+@source '../node_modules/@heroui/theme/dist/components/modal.js';
