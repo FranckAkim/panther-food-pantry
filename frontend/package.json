@@ -7,15 +7,25 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "format": "prettier --write src tests *.js *.json *.md",
+    "format:check": "prettier --check src tests *.js *.json *.md"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.117.3",
+    "@heroui/modal": "^2.2.29",
+    "@heroui/system": "^2.4.28",
+    "@heroui/theme": "^2.4.26",
+    "framer-motion": "^12.43.0",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "react-hot-toast": "^2.6.1",
+    "@supabase/supabase-js": "2.117.3"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "4.3.4",
+    "prettier": "3.9.6",
+    "tailwindcss": "^4.3.3",
     "vite": "5.4.11"
   }
 }

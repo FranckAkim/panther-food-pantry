@@ -1,0 +1,57 @@
+export const adminUsersKey = "panther-admin-users-v1";
+
+export const initialAdminUsers = [
+  {
+    id: "user-taylor",
+    name: "Taylor Brooks",
+    email: "tbrooks@pvamu.edu",
+    aliases: ["admin@pvamu.edu"],
+    role: "admin",
+    active: true,
+    lastSignIn: "2026-10-14T08:00:00-05:00",
+  },
+  {
+    id: "user-dana",
+    name: "Dana Carter",
+    email: "dcarter@pvamu.edu",
+    aliases: ["staff@pvamu.edu"],
+    role: "staff",
+    active: true,
+    lastSignIn: "2026-10-14T08:30:00-05:00",
+  },
+  {
+    id: "user-luis",
+    name: "Luis Ramirez",
+    email: "lramirez@pvamu.edu",
+    role: "staff",
+    active: true,
+    lastSignIn: "2026-10-12T09:00:00-05:00",
+  },
+  {
+    id: "user-sam",
+    name: "Sam Okafor",
+    email: "sokafor@pvamu.edu",
+    role: "staff",
+    active: false,
+    lastSignIn: "2026-08-30T09:00:00-05:00",
+  },
+  {
+    id: "user-jordan",
+    name: "Jordan Ellis",
+    email: "jellis@pvamu.edu",
+    aliases: ["jordan@pvamu.edu"],
+    studentId: "P00281734",
+    role: "student",
+    active: true,
+    lastSignIn: "2026-10-13T09:00:00-05:00",
+  },
+  {
+    id: "user-maya",
+    name: "Maya Thompson",
+    email: "mthompson@pvamu.edu",
+    studentId: "P00213345",
+    role: "student",
+    active: true,
+    lastSignIn: "2026-10-14T09:00:00-05:00",
+  },
+];

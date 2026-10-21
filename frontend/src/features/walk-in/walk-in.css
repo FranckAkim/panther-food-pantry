@@ -1,0 +1,158 @@
+.walk-in-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.walk-in-page .page-heading {
+  margin-bottom: 0;
+}
+.walk-in-page .page-heading p {
+  font-size: 14px;
+  line-height: 20px;
+}
+.walk-in-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 20px 24px;
+}
+.walk-in-card h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+}
+.walk-in-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+.walk-in-search {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.walk-in-search .field {
+  flex: 1 1 220px;
+  max-width: 420px;
+}
+.walk-in-card .field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.walk-in-card .field > label {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.walk-in-page .walk-in-card .field .input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #8f879f;
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 11px 14px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 20px;
+}
+.walk-in-page .walk-in-card .field .input[readonly] {
+  border-color: var(--line);
+  background: var(--background);
+  color: var(--muted);
+}
+.walk-in-card .button {
+  align-self: flex-start;
+  padding: 12px 20px;
+  min-height: 44px;
+  border: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.walk-in-search .button {
+  align-self: flex-end;
+}
+.walk-in-status {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #fff4d1;
+  padding: 16px;
+  border-radius: 14px;
+  color: #6b4a00;
+}
+.walk-in-status img {
+  display: block;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.walk-in-status strong {
+  font-weight: 600;
+}
+.walk-in-status-found {
+  background: #edf7ed;
+  color: #285b2a;
+}
+.walk-in-profile-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.walk-in-check {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  cursor: pointer;
+}
+.walk-in-check input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  margin: 0;
+  accent-color: var(--purple);
+  cursor: pointer;
+}
+.walk-in-helper {
+  color: var(--muted);
+}
+@media (max-width: 900px) {
+  .walk-in-profile-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .walk-in-card {
+    padding: 20px;
+  }
+  .walk-in-profile-fields {
+    grid-template-columns: 1fr;
+  }
+  .walk-in-search .field {
+    min-width: 0;
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .walk-in-status {
+    padding: 14px;
+  }
+}
+.walk-in-page .walk-in-card .field .input:disabled {
+  border-color: var(--line);
+  background: var(--background);
+  color: var(--muted);
+  opacity: 1;
+  -webkit-text-fill-color: var(--muted);
+}
