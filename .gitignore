@@ -11,6 +11,8 @@ node_modules/
 frontend/dist/
 # Env and editors
 .env
+.env.*
+!.env.example
 .vscode/
 .idea/
 .DS_Store
