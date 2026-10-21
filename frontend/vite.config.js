@@ -11,7 +11,12 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return "react";
-          if (/node_modules\/(@heroui|@react-aria|@react-stately|@react-types|@internationalized|framer-motion|motion-dom|motion-utils)\//.test(id)) return "heroui";
+          if (
+            /node_modules\/(@heroui|@react-aria|@react-stately|@react-types|@internationalized|framer-motion|motion-dom|motion-utils)\//.test(
+              id,
+            )
+          )
+            return "heroui";
         },
       },
     },
