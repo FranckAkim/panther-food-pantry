@@ -110,3 +110,5 @@ docker-compose.yml  local development stack
 | Integration, documentation + presentation | Usman Jibril |
 
 How we work: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Test commands, baseline results, and remaining coverage: [DevOps testing guide](docs/testing.md).
