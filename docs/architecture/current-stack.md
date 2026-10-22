@@ -82,9 +82,11 @@ In `backend/`, install `requirements-dev.txt`, then run `ruff check .`,
 `ruff format --check .`, and `pytest -q` for the retained Python scaffold.
 CI also builds Docker and checks `/api/health`.
 
-Supabase SQL access/inventory tests and the authorized live-backend runner are
-separate checks documented in [the backend guide](../supabase-backend.md). They
-are not run automatically by the current GitHub Actions workflow.
+CI runs SQL access/inventory and concurrency checks in disposable PostgreSQL
+using `node scripts/test-database.mjs` and a test-only Auth stand-in. These checks
+do not exercise hosted Auth, PostgREST, or Edge Functions. The authorized live
+runner remains separate; see [the backend guide](../supabase-backend.md) and the
+[system acceptance checklist](../acceptance-tests.md).
 
 The [October 8 proposal](design.md), original diagrams, and course presentation
 remain historical design artifacts. Their planned FastAPI modules, cookie

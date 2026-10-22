@@ -112,3 +112,5 @@ docker-compose.yml  local development stack
 How we work: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Test commands, baseline results, and remaining coverage: [DevOps testing guide](docs/testing.md).
+
+Track user journeys and integration blockers: [System acceptance checklist](docs/acceptance-tests.md).

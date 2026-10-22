@@ -6,6 +6,16 @@ on:
     branches: [main]
 
 jobs:
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - name: SQL permissions, stock invariants, and concurrency
+        run: node scripts/test-database.mjs
+
   backend:
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: backend } }
