@@ -35,10 +35,17 @@ jobs:
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
       - name: Build production image
         run: docker build -t panther-food-pantry:ci .
       - name: Smoke test
         run: |
-          docker run -d -p 8000:8000 --name app panther-food-pantry:ci
-          for i in $(seq 1 20); do curl -fs http://localhost:8000/api/health && exit 0; sleep 1; done
-          docker logs app; exit 1
+          docker run -d -p 127.0.0.1:8000:8000 --name pantry-ci panther-food-pantry:ci
+          node scripts/smoke-test.mjs
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs pantry-ci || true
+      - name: Remove test container
+        if: always()
+        run: docker rm -f pantry-ci || true
