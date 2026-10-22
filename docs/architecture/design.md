@@ -1,5 +1,7 @@
 # Panther Food Pantry — Architecture Design
 
+> Historical October 8 proposal. Read [Current stack and integration boundaries](current-stack.md) for the merged implementation. Supabase supplies the business backend; the FastAPI business modules and cookie authentication described below are not implemented. The screens still use mock data pending integration.
+
 Oct 8, 2026 · Franck Darole
 
 Build **Option B**: a React single-page app and a FastAPI "modular monolith" in one Docker container, backed by PostgreSQL. It matches the tools the team already committed to in Homework 2, splits cleanly across 8 people, and is small enough to finish by the Nov 19 final presentation.

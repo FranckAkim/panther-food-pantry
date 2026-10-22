@@ -1,11 +1,11 @@
 # Panther Pantry frontend
 
-React 18 and Vite frontend with student, staff, and admin portals. The app uses mock data and browser storage; no backend is connected yet.
+React 18 and Vite frontend with student, staff, and admin portals. The screens use mock data and browser storage. Supabase backend helpers are available in `src/lib/`, but the screens do not call them yet.
 
 ## Development
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
@@ -20,6 +20,14 @@ npm run format:check
 ```
 
 The sign-in pages show sample accounts. Mock records persist per browser origin, so `localhost` and `127.0.0.1` have separate demo data.
+
+## Supabase integration
+
+Use Node.js 22, matching CI. The installed `@supabase/supabase-js` client is wrapped by `lib/supabase.js` and the injectable `lib/pantryApi.js` service. Copy `.env.example` to `.env` for the public project URL and publishable key; never add a service-role key. Setting these variables does not enable live data in the existing screens.
+
+The service covers Auth, live roles/access, staff-verified student IDs, category-based requests, inventory, stock adjustments, and authenticated availability. The UI uses item/slot-based mock requests and additional workflows without matching backend contracts. Read [the integration boundaries](../docs/architecture/current-stack.md) and [backend setup](../docs/supabase-backend.md) before connecting feature hooks.
+
+Run `node scripts/pantry-terminal.mjs` after `npm ci` to exercise the backend independently. Sample credentials on the UI do not create Supabase users.
 
 ## Code organization
 
@@ -54,6 +62,8 @@ src/
     mockStorage.js            Storage reads/writes and cross-component events
     mockLatency.js            Abortable simulated backend delays
     dates.js                  Shared admin date formatting
+    supabase.js               Environment-configured Supabase client factory
+    pantryApi.js              Auth, access, requests, inventory, and RPC service
   assets/                     Imported SVG assets
   styles.css                  Global tokens, shared controls, and workspace styles
   heroui.css                  HeroUI/Tailwind integration

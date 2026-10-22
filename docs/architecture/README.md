@@ -1,5 +1,13 @@
 # Architecture
 
+## Current implementation
+
+The merged implementation uses React and a Supabase business backend. The screens still use mock storage, while FastAPI provides health endpoints and built UI hosting. Read [Current stack and integration boundaries](current-stack.md) and [Supabase setup](../supabase-backend.md) for the implemented contracts and remaining integration work.
+
+## Original October 8 proposal
+
+The decisions and diagrams below record the original proposal. Its FastAPI business modules, cookie sessions, and distribution endpoint are not implemented. Supabase was subsequently introduced by the merged backend work.
+
 **Decision: Option B — React SPA + FastAPI modular monolith + PostgreSQL, deployed as one Docker container.** It uses every tool the team committed to in Homework 2 (Jira, Figma, VS Code, GitHub Actions, API tests, Docker), gives each of the 8 team members clear ownership, and is finishable by the Nov 19 final presentation.
 
 Diagrams are editable in [draw.io](https://app.diagrams.net) (File → Open from → Device). `Panther_Pantry_Architecture_ALL.drawio` holds all of them as pages.
