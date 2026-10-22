@@ -5,7 +5,16 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const base = new URL(process.env.PANTRY_SMOKE_URL || 'http://127.0.0.1:8000');
 async function get(path) {
-  return fetch(new URL(path, base), { signal: AbortSignal.timeout(3000) });
+  // Keep a referenced timer while connecting during container startup.
+  // AbortSignal.timeout uses an unref'ed timer; Node can otherwise exit with an
+  // unsettled top-level await before the health retry loop gets a response.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    return await fetch(new URL(path, base), { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 let started = false;

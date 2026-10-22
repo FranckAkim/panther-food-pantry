@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test",
     "format": "prettier --write src tests *.js *.json *.md",
     "format:check": "prettier --check src tests *.js *.json *.md"
   },
@@ -15,13 +16,14 @@
     "@heroui/modal": "^2.2.29",
     "@heroui/system": "^2.4.28",
     "@heroui/theme": "^2.4.26",
+    "@supabase/supabase-js": "2.117.3",
     "framer-motion": "^12.43.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "react-hot-toast": "^2.6.1",
-    "@supabase/supabase-js": "2.117.3"
+    "react-hot-toast": "^2.6.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "4.3.4",
     "prettier": "3.9.6",
