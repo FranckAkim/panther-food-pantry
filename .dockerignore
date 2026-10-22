@@ -9,6 +9,7 @@
 frontend/dist
 frontend/playwright-report
 frontend/test-results
+**/pantry-live-fixtures*.json
 **/.env
 **/.env.*
 !**/.env.example

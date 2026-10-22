@@ -1,5 +1,59 @@
 # DevOps test baseline
 
+## Browser transport and email follow-up — October 22, 2026
+
+| Check | Observed result |
+| --- | --- |
+| Auth preflight from local browser origin | HTTP 200; requested origin/method/headers allowed |
+| Availability RPC preflight | HTTP 200; requested origin/method/headers allowed |
+| Staff provisioning preflight | HTTP 204 for explicitly allowed local origin; Chromium reads missing/invalid-session 401 responses; unlisted origin blocked |
+| Authorized campus-email signup | Accepted; confirmation-send timestamp recorded; no session issued before confirmation |
+| Confirmation/account state | Account later became confirmed and password login passed |
+| Inbox receipt | User reported no email received; delivery is not verified |
+| Delivery investigation | Supabase log service returned backend errors twice; no root cause established and no resend attempted |
+| Email-test cleanup | Disposable signup account/session/profile and local generated password file removed |
+
+The confirmation state alone is not proof of inbox delivery or a human opening
+the link. SMTP configuration was not independently verified. Check provider delivery
+logs and recipient-side quarantine before claiming that email works.
+
+`tests/browser-readiness.mjs` now provides an opt-in, read-only CORS check. Four
+offline tests cover its status/origin/method/header rules, bringing the helper
+suite to 47 passing tests including six staff CORS regression tests. All three live preflight checks now pass. Five existing Chromium workflow tests also pass.
+
+The UI remains mocked. Connecting it still requires session/bootstrap handling,
+backend UUID/profile mapping, category-request/status adapters, and backend
+contracts for pickup slots, distributions, donations and reports. Configure the exact deployed frontend origin before using the invitation API from a different origin.
+
+## Hosted Supabase follow-up — October 22, 2026
+
+The live checks passed against the separately owned test project
+`bydaysnwrxkkzwnnqscq`, not the shared pantry project. The target was inspected as
+empty before installing the schema and deploying the staff function.
+
+| Area | Observed result |
+| --- | --- |
+| SQL access and inventory suites | Both passed; transactional fixtures rolled back |
+| Anonymous API and invalid credentials | Access denied / invalid credentials as expected |
+| Real password authentication | Disposable admin, student, and invited staff accounts signed in |
+| Staff provisioning | Admin generated an invitation; staff accepted it and set a password; student provisioning was rejected |
+| Inventory and availability | Item/lot create and update, audited stock adjustment, student-safe availability, unauthorized writes rejected |
+| Concurrent final-unit decrement | Two parallel HTTP calls: exactly one success and one rejection; final quantity and ledger sum both zero |
+| Requests and disabled access | Student submitted with server-owned identity; staff read authorized requests; disabled student's existing session immediately lost pantry access |
+| Logout and cleanup | Sessions signed out; run-owned accounts, records and audit fixtures removed; all pantry-table and Auth user/session counts verified zero |
+
+Admin/student fixtures were temporarily seeded as confirmed Auth users and email
+identities in the test database with random bcrypt-hashed passwords; the staff
+identity was created through the real application invitation flow. This verifies
+password Auth and invitation acceptance, but does not verify signup email delivery
+or campus SSO. No confirmation settings were disabled and no email was sent.
+
+Live runners now require an explicit test URL, project reference, publishable key,
+and matching run-specific fixtures. They reject the shared project, mismatched
+origins, and privileged keys before creating clients. Five offline configuration
+tests cover those safeguards; the helper suite now has 37 passing tests.
+See [live-test setup and cleanup responsibilities](supabase-backend.md#isolated-live-test-configuration).
+
 ## Browser automation and formatting follow-up — October 22, 2026
 
 The six formatting findings from the initial baseline are fixed, and frontend
@@ -105,11 +159,13 @@ from the build context. The image installs its own Linux dependencies.
 
 ## Next test stages
 
-1. Use a designated Supabase test project and provision disposable student,
-   staff, and admin identities. Run the SQL tests and live runner described in
-   [the backend guide](supabase-backend.md), with explicit fixture cleanup.
-2. After UI integration, test the real request/stock contracts and concurrent
+1. After UI integration, test the real request/stock contracts and concurrent
    operations through the application, including disabled accounts and denied roles.
+2. Test real email confirmation/delivery with authorized test inboxes and configured
+   SMTP; resolve and test campus SSO if it becomes a requirement.
 
 The initial baseline predates the browser automation described above. Neither
-stage claims a hosted-backend run.
+the initial baseline nor that browser-only stage claimed hosted-backend coverage;
+the hosted follow-up at the top records the separate live run.
+
+

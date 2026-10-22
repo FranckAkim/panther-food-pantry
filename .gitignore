@@ -11,6 +11,7 @@ node_modules/
 frontend/dist/
 frontend/playwright-report/
 frontend/test-results/
+**/pantry-live-fixtures*.json
 # Env and editors
 .env
 .env.*

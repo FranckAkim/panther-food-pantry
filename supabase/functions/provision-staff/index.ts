@@ -1,7 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.117.3';
 import { createStaffHandler } from './handler.mjs';
+import { withCors } from './cors.mjs';
+import { allowedOrigins } from './cors-config.mjs';
 
-Deno.serve(async request => {
+Deno.serve(withCors(async request => {
   // The gateway JWT check is disabled for modern Auth signing keys. Every request
   // is independently verified by Auth.getUser and live database admin-role checks.
   const url = Deno.env.get('SUPABASE_URL')!;
@@ -12,8 +14,5 @@ Deno.serve(async request => {
   const adminClient = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  try { return await createStaffHandler({ userClient, adminClient })(request); }
-  catch { return new Response(JSON.stringify({ error: 'Account service unavailable' }), {
-    status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-  }); }
-});
+  return await createStaffHandler({ userClient, adminClient })(request);
+}, allowedOrigins));
