@@ -9,6 +9,8 @@ backend/static/
 # Node
 node_modules/
 frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
 # Env and editors
 .env
 .env.*

@@ -1,0 +1,2 @@
+# Keep frontend formatting identical in Windows checkouts and Linux CI.
+frontend/** text=auto eol=lf

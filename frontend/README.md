@@ -19,6 +19,28 @@ npm run format      # Format source, tests, configuration, and documentation
 npm run format:check
 ```
 
+## Browser workflow tests
+
+The Playwright suite runs Chromium against the production build on port 4173:
+
+```sh
+npx playwright install --no-shell chromium
+npm run build
+npm run test:e2e
+```
+
+Tests cover invalid sign-in, session persistence/logout, student request and cancellation,
+slot reservation/release, walk-in ID checks, pickup stock deductions and duplicate prevention,
+donations, admin user creation, report filters, and audit pagination. Each test starts with
+fresh browser storage and a fixed sample-calendar date. External requests are blocked; these
+tests exercise the mock UI, not the hosted Supabase backend.
+
+CI installs Chromium and its Linux dependencies, enforces `format:check`, and uploads the HTML
+browser report plus failure screenshots/traces for seven days. Open a local report with
+`npx playwright show-report`. Browser output folders are ignored by Git and Docker.
+Frontend text uses LF line endings through the root `.gitattributes`, so the formatting check
+works consistently in Windows checkouts and Linux CI.
+
 The sign-in pages show sample accounts. Mock records persist per browser origin, so `localhost` and `127.0.0.1` have separate demo data.
 
 ## Supabase integration

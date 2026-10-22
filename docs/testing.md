@@ -1,5 +1,35 @@
 # DevOps test baseline
 
+## Browser automation and formatting follow-up — October 22, 2026
+
+The six formatting findings from the initial baseline are fixed, and frontend
+formatting is now a required CI step. `.gitattributes` keeps frontend text at LF
+on Windows and Linux. No application behavior changed in those formatting edits.
+
+Five independent Chromium tests now run against the built UI in a separate CI
+job. They cover invalid sign-in/session persistence/logout; request submission,
+reload, cancellation and slot release; walk-in ID verification and duplicate
+pickup stock protection; donation persistence/stock additions; and admin user
+creation, report filtering and audit pagination. Tests fail on uncaught page
+errors or external-service requests. They use fresh contexts and the sample
+calendar date, with no hosted Supabase data or credentials.
+
+Run from `frontend/`:
+
+```sh
+npm ci
+npx playwright install --no-shell chromium
+npm run build
+npm run test:e2e
+npm run format:check
+```
+
+CI uses `playwright install --with-deps --no-shell chromium` on Linux and uploads
+the HTML report and failure traces/screenshots for seven days. The separate
+container smoke tests still verify FastAPI's production serving boundary.
+
+## Initial baseline
+
 Run date: October 22, 2026. Based on merged `main` commit `aae222b`, plus the
 test/tooling changes on this branch. Frontend commands ran on Windows Node 24;
 the production Docker build uses the project's Node 22 and Python 3.12 images.
@@ -75,14 +105,11 @@ from the build context. The image installs its own Linux dependencies.
 
 ## Next test stages
 
-1. Resolve the six formatting findings before enabling a formatting CI gate.
-2. Add repeatable browser workflow tests for sign-in, requests/cancellation,
-   pickup completion, donations, admin dialogs, report filters, and pagination.
-3. Use a designated Supabase test project and provision disposable student,
+1. Use a designated Supabase test project and provision disposable student,
    staff, and admin identities. Run the SQL tests and live runner described in
    [the backend guide](supabase-backend.md), with explicit fixture cleanup.
-4. After UI integration, test the real request/stock contracts and concurrent
+2. After UI integration, test the real request/stock contracts and concurrent
    operations through the application, including disabled accounts and denied roles.
 
-The existing manual browser checks from the frontend PR review are separate from
-this baseline; no browser automation suite or hosted-backend run is claimed here.
+The initial baseline predates the browser automation described above. Neither
+stage claims a hosted-backend run.
