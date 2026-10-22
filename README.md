@@ -15,7 +15,7 @@ The merged code contains a **React frontend and Supabase business backend**. The
 
 | Layer | Implemented technology | Current role |
 | --- | --- | --- |
-| Frontend | React 18.3.1, JavaScript/JSX, Vite 5, HeroUI, Tailwind CSS 4, Framer Motion, react-hot-toast | Student, staff, and admin screens, hash routing, browser-persisted demo workflows |
+| Frontend | React 18.3.1, JavaScript/JSX, Vite 6.4.5, HeroUI, Tailwind CSS 4, Framer Motion, react-hot-toast | Student, staff, and admin screens, hash routing, browser-persisted demo workflows |
 | Business backend | Supabase Auth, PostgreSQL, PostgREST, RLS, SQL RPCs | Accounts, roles/access, verified student IDs, category-based requests, inventory, atomic stock adjustments, availability |
 | Privileged function | Supabase Edge Function, TypeScript/Deno | Admin-authorized staff provisioning and private invitations |
 | Retained server | Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2, psycopg 3 | Health checks, optional database readiness, and built React hosting |
