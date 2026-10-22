@@ -2,7 +2,9 @@
 
 Project: Panther Food Pantry (`pvidoddlywstnowhcfyl`). Schema deployed through the
 Supabase migration `pantry_auth_roles_requests`; its source is `supabase/schema.sql`.
-The existing FastAPI scaffold is retained while the team migrates to Supabase.
+The existing FastAPI scaffold is retained for health checks and built UI hosting.
+See [current architecture](architecture/current-stack.md) for the boundary between
+the mock screens, Supabase business backend, and Docker scaffold.
 
 ## Authentication
 
@@ -69,7 +71,7 @@ Run `supabase/tests/access.sql` in SQL Editor. It creates temporary fixtures ins
 a transaction and rolls all changes back. Tests cover metadata role escalation,
 own-record access, admin operations, audit records, last-admin protection, staff
 access, disabled existing sessions, and anonymous denial. No real user data remains.
-Run helper tests with `node --test tests/*.test.js` from frontend (15 tests).
+Run helper tests with `npm test` from `frontend/`; this also covers UI domain helpers.
 Run `supabase/tests/inventory.sql` in SQL Editor for stock/availability policies.
 
 Live backend API tests passed with explicitly authorized temporary accounts:
@@ -113,8 +115,7 @@ Staff accept their private invitation with
 The tool uses a publishable key only and never stores a session or prints session
 tokens. Private invitation links are displayed only for the administrator's
 explicit create-staff action; share them only with the intended recipient.
-On this Mac, the bundled Node executable is
-`/Users/spacecadet/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`.
+Use Node.js 22, matching the frontend CI and Docker build.
 
 The staff invitation function verifies the access token using Auth.getUser and
 checks live admin membership before using its server-only service key. It is
