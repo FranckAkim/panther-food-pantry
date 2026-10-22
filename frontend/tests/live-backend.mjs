@@ -4,12 +4,14 @@ import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { createClient } from "@supabase/supabase-js";
 import { createPantryApi } from "../src/lib/pantryApi.js";
+import { liveTestConfig, validateLiveFixtures } from "./live/config.js";
+const config = liveTestConfig();
 const fixturePath = process.env.PANTRY_TEST_FIXTURES;
 if (!fixturePath)
   throw new Error("Set PANTRY_TEST_FIXTURES to the private temporary fixture file.");
 const fixtures = JSON.parse(await readFile(fixturePath, "utf8"));
-const url = "https://pvidoddlywstnowhcfyl.supabase.co";
-const key = "sb_publishable_8DHTKww7F0OSt-8klBBnBg_aEDbmG8Y";
+validateLiveFixtures(fixtures, config);
+const { url, key } = config;
 const makeClient = () =>
   createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 const adminClient = makeClient(),
@@ -20,8 +22,10 @@ const admin = createPantryApi(adminClient),
   staff = createPantryApi(staffClient);
 const row = (value) => (Array.isArray(value) ? value[0] : value);
 try {
-  await admin.signIn({ ...fixtures.admin, workspace: "admin" });
-  await student.signIn({ ...fixtures.student, workspace: "student" });
+  const adminAccount = await admin.signIn({ ...fixtures.admin, workspace: "admin" });
+  const studentAccount = await student.signIn({ ...fixtures.student, workspace: "student" });
+  assert.equal(adminAccount.user.id, fixtures.admin.id);
+  assert.equal(studentAccount.user.id, fixtures.student.id);
   console.log("PASS: real administrator and student password login");
   const invitation = await admin.provisionStaff({
     email: fixtures.staffEmail,
@@ -29,6 +33,9 @@ try {
   });
   assert.equal(invitation.role, "staff");
   const inviteUrl = new URL(invitation.invitationUrl);
+  assert.equal(inviteUrl.origin, url);
+  assert.equal(inviteUrl.pathname, "/auth/v1/verify");
+  assert.equal(inviteUrl.searchParams.get("type"), "invite");
   const verified = await staffClient.auth.verifyOtp({
     token_hash: inviteUrl.searchParams.get("token"),
     type: "invite",
@@ -58,8 +65,8 @@ try {
       itemId: item.id,
       quantity: 5,
       storageLocation: "TEST shelf",
-      receivedDate: "2026-10-13",
-      expiryDate: "2027-10-13",
+      receivedDate: new Date().toISOString().slice(0, 10),
+      expiryDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
     }),
   );
   await staff.updateLot(lot.id, { storageLocation: "TEST shelf B" });

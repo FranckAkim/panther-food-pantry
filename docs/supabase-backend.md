@@ -67,6 +67,42 @@ Confirm category choices and final fields with the frontend team before release.
 
 ## Verification
 
+### Isolated live-test configuration
+
+Live runners have no default URL or API key. They refuse the shared pantry project
+and require an explicit project reference that matches the URL. Keep the following
+in an ignored local `frontend/.env.test`, using your isolated project's values:
+
+```dotenv
+PANTRY_TEST_PROJECT_REF=your_20_character_ref
+PANTRY_TEST_URL=https://your_20_character_ref.supabase.co
+PANTRY_TEST_PUBLISHABLE_KEY=sb_publishable_your_test_key
+PANTRY_TEST_FIXTURES=C:/private/pantry-live-fixtures.json
+```
+
+From `frontend/`, using Node 22:
+
+```sh
+node --env-file=.env.test tests/auth-smoke.mjs
+node --env-file=.env.test tests/live-backend.mjs
+```
+
+The first runner checks invalid credentials and anonymous denial without creating
+accounts. The second changes test data: it creates a staff invitation, inventory,
+a lot and request; consumes stock; and disables its disposable student account.
+Use only an isolated test project and run-specific accounts. It signs out sessions
+in `finally`; the project owner must still remove fixture accounts and business
+records afterward, including after a failed run. It does not send invitation email.
+
+The private fixture JSON must contain `projectRef`, a unique lowercase `run` marker
+(8–64 letters/numbers/hyphens), `admin` and `student` objects with `id`, `email`, and
+`password`, plus `staffEmail` and `staffPassword`. All three emails must contain the
+run marker and end in `@pvamu.edu`; passwords must be at least 12 characters. The
+admin/student accounts must already be confirmed, with their correct application
+roles. The staff email must be unused. Never commit this file or its credentials.
+
+### SQL and API checks
+
 Run `supabase/tests/access.sql` in SQL Editor. It creates temporary fixtures inside
 a transaction and rolls all changes back. Tests cover metadata role escalation,
 own-record access, admin operations, audit records, last-admin protection, staff
