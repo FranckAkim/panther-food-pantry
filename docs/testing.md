@@ -1,5 +1,22 @@
 # DevOps test baseline
 
+## Repeatable database checks and system acceptance
+
+Run `node scripts/test-database.mjs` from the repo root with Node 22 and Docker.
+The same command runs in the CI `database` job. It creates a fresh PostgreSQL 16
+container with networking disabled and no published ports, installs a test-only
+Auth stand-in and the committed schema, runs the access/inventory SQL suites,
+checks rollback, races two final-unit decrements, and checks RLS/function grants.
+It removes its own container and anonymous volume on completion or test failure.
+It accepts no hosted URL or credentials and never selects an existing database.
+
+The Auth stand-in is not Supabase Auth: no JWT signature, session, HTTP API,
+Edge Function deployment, or email behavior is verified. Hosted tests remain
+separate. Do not apply `supabase/tests/local-auth.sql` to any Supabase project.
+
+Use the [system acceptance checklist](acceptance-tests.md) to track real user
+journeys, evidence, and the integration gates that currently block them.
+
 ## Browser transport and email follow-up — October 22, 2026
 
 | Check | Observed result |
