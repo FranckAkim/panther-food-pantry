@@ -97,11 +97,20 @@ node --env-file=.env.test tests/browser-readiness.mjs
 
 This checks OPTIONS status, allowed origin, POST, and bearer-client headers for
 Auth, the availability RPC, and staff provisioning. It sends no email and changes
-no records. It exits nonzero if an endpoint is not browser-ready. The current
-staff function is documented for terminal/server use and returns 405 without CORS
-headers to preflight; expect this readiness check to flag it until approved browser
-origins are configured and preflight/error handling is implemented. This live
-check is not part of offline CI and does not prove the React screens are integrated.
+no records. It exits nonzero if an endpoint is not browser-ready. Staff provisioning
+uses an exact origin allowlist in `supabase/functions/provision-staff/cors-config.mjs`.
+The committed default is empty (browser access disabled). Before deploying, set
+`allowedOrigins` to the exact approved frontend origins, without paths or trailing
+slashes. Never use `*`. Include `index.ts`, `handler.mjs`, `cors.mjs`, and
+`cors-config.mjs` in the deployment.
+
+The isolated test deployment (version 2) explicitly overrides only the config file
+with `export const allowedOrigins = ['http://127.0.0.1:4173'];`. Auth and live admin
+role checks still apply to POST requests. OPTIONS performs no provisioning.
+All three live preflights pass for that origin, and Chromium verified readable
+401 responses for missing/invalid sessions and rejection of an unlisted origin.
+This live check is not part of offline CI and does not prove the React screens
+are integrated. Server/terminal callers without Origin still require authorization.
 
 The first runner checks invalid credentials and anonymous denial without creating
 accounts. The second changes test data: it creates a staff invitation, inventory,
@@ -199,3 +208,4 @@ Terminal action 15 provides this workflow. `updateMyProfile` never sends a stude
 
 References: https://supabase.com/docs/guides/auth/passwords and
 https://supabase.com/docs/guides/database/secure-data.
+

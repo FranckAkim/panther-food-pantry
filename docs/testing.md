@@ -6,7 +6,7 @@
 | --- | --- |
 | Auth preflight from local browser origin | HTTP 200; requested origin/method/headers allowed |
 | Availability RPC preflight | HTTP 200; requested origin/method/headers allowed |
-| Staff provisioning preflight | HTTP 405 with no CORS headers; blocked for cross-origin browser callers |
+| Staff provisioning preflight | HTTP 204 for explicitly allowed local origin; Chromium reads missing/invalid-session 401 responses; unlisted origin blocked |
 | Authorized campus-email signup | Accepted; confirmation-send timestamp recorded; no session issued before confirmation |
 | Confirmation/account state | Account later became confirmed and password login passed |
 | Inbox receipt | User reported no email received; delivery is not verified |
@@ -19,14 +19,11 @@ logs and recipient-side quarantine before claiming that email works.
 
 `tests/browser-readiness.mjs` now provides an opt-in, read-only CORS check. Four
 offline tests cover its status/origin/method/header rules, bringing the helper
-suite to 41 passing tests. The live readiness command intentionally fails on the
-current staff endpoint; that is an integration finding, not a failing offline CI test.
+suite to 47 passing tests including six staff CORS regression tests. All three live preflight checks now pass. Five existing Chromium workflow tests also pass.
 
 The UI remains mocked. Connecting it still requires session/bootstrap handling,
 backend UUID/profile mapping, category-request/status adapters, and backend
-contracts for pickup slots, distributions, donations and reports. Resolve the
-staff endpoint's approved-origin CORS behavior before using its invitation API
-from the browser, while preserving its token and live-role checks.
+contracts for pickup slots, distributions, donations and reports. Configure the exact deployed frontend origin before using the invitation API from a different origin.
 
 ## Hosted Supabase follow-up — October 22, 2026
 
@@ -170,3 +167,5 @@ from the build context. The image installs its own Linux dependencies.
 The initial baseline predates the browser automation described above. Neither
 the initial baseline nor that browser-only stage claimed hosted-backend coverage;
 the hosted follow-up at the top records the separate live run.
+
+
