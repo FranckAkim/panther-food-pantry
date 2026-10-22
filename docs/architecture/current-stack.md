@@ -7,7 +7,7 @@ Dependency manifests and SQL sources are authoritative for exact versions and co
 
 | Layer | Technology | Responsibility |
 | --- | --- | --- |
-| UI | React 18.3.1, JavaScript/JSX, Vite 5 | Student, staff, and admin portals with hash navigation |
+| UI | React 18.3.1, JavaScript/JSX, Vite 6.4.5 | Student, staff, and admin portals with hash navigation |
 | UI components/styles | HeroUI, Tailwind CSS 4, feature CSS, Framer Motion, react-hot-toast | Controls, dialogs, animation, and notifications |
 | Demo state | React hooks and browser localStorage | Current screen authentication, records, and simulated workflows |
 | Business backend | Supabase Auth, PostgreSQL, PostgREST, RLS, SQL RPC functions | Accounts, access control, requests, and inventory |
