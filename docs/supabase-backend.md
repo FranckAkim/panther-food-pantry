@@ -87,6 +87,22 @@ node --env-file=.env.test tests/auth-smoke.mjs
 node --env-file=.env.test tests/live-backend.mjs
 ```
 
+For a read-only browser transport check, also set
+`PANTRY_TEST_APP_ORIGIN=http://127.0.0.1:4173` (or the exact intended frontend
+origin) and run:
+
+```sh
+node --env-file=.env.test tests/browser-readiness.mjs
+```
+
+This checks OPTIONS status, allowed origin, POST, and bearer-client headers for
+Auth, the availability RPC, and staff provisioning. It sends no email and changes
+no records. It exits nonzero if an endpoint is not browser-ready. The current
+staff function is documented for terminal/server use and returns 405 without CORS
+headers to preflight; expect this readiness check to flag it until approved browser
+origins are configured and preflight/error handling is implemented. This live
+check is not part of offline CI and does not prove the React screens are integrated.
+
 The first runner checks invalid credentials and anonymous denial without creating
 accounts. The second changes test data: it creates a staff invitation, inventory,
 a lot and request; consumes stock; and disables its disposable student account.

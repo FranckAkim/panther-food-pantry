@@ -1,5 +1,33 @@
 # DevOps test baseline
 
+## Browser transport and email follow-up — October 22, 2026
+
+| Check | Observed result |
+| --- | --- |
+| Auth preflight from local browser origin | HTTP 200; requested origin/method/headers allowed |
+| Availability RPC preflight | HTTP 200; requested origin/method/headers allowed |
+| Staff provisioning preflight | HTTP 405 with no CORS headers; blocked for cross-origin browser callers |
+| Authorized campus-email signup | Accepted; confirmation-send timestamp recorded; no session issued before confirmation |
+| Confirmation/account state | Account later became confirmed and password login passed |
+| Inbox receipt | User reported no email received; delivery is not verified |
+| Delivery investigation | Supabase log service returned backend errors twice; no root cause established and no resend attempted |
+| Email-test cleanup | Disposable signup account/session/profile and local generated password file removed |
+
+The confirmation state alone is not proof of inbox delivery or a human opening
+the link. SMTP configuration was not independently verified. Check provider delivery
+logs and recipient-side quarantine before claiming that email works.
+
+`tests/browser-readiness.mjs` now provides an opt-in, read-only CORS check. Four
+offline tests cover its status/origin/method/header rules, bringing the helper
+suite to 41 passing tests. The live readiness command intentionally fails on the
+current staff endpoint; that is an integration finding, not a failing offline CI test.
+
+The UI remains mocked. Connecting it still requires session/bootstrap handling,
+backend UUID/profile mapping, category-request/status adapters, and backend
+contracts for pickup slots, distributions, donations and reports. Resolve the
+staff endpoint's approved-origin CORS behavior before using its invitation API
+from the browser, while preserving its token and live-role checks.
+
 ## Hosted Supabase follow-up — October 22, 2026
 
 The live checks passed against the separately owned test project
