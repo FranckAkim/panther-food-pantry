@@ -23,4 +23,42 @@ export const initialDonations = [
     received: "2026-09-12",
     lines: 6,
   },
+  ...Array.from({ length: 24 }, (_, index) => {
+    const donors = [
+      "PVAMU student organization",
+      "Prairie View community drive",
+      "Campus faculty collection",
+      "Local grocery partner",
+      "Alumni food drive",
+      "Individual donor",
+    ];
+    const foods = [
+      ["black-beans", "Canned black beans"],
+      ["rice", "White rice (2 lb)"],
+      ["cereal", "Cereal"],
+      ["spaghetti", "Spaghetti"],
+      ["green-beans", "Canned green beans"],
+    ];
+    const received = `2026-${index < 12 ? "10" : "09"}-${String(1 + (index % 12)).padStart(2, "0")}`;
+    const details = Array.from({ length: 2 + (index % 3) }, (_, offset) => {
+      const [itemId, name] = foods[(index + offset) % foods.length];
+      return {
+        id: `demo-donation-line-${index}-${offset}`,
+        itemId,
+        name,
+        quantity: 6 + ((index + offset) % 9),
+        expiry: "2027-06-30",
+        shelf: offset % 2 ? "B1" : "A2",
+      };
+    });
+    return {
+      id: `demo-donation-${index + 1}`,
+      donor: donors[index % donors.length],
+      donors: [donors[index % donors.length]],
+      received,
+      lines: details.length,
+      units: details.reduce((total, line) => total + line.quantity, 0),
+      details,
+    };
+  }),
 ];

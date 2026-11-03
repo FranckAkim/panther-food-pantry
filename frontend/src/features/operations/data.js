@@ -1,3 +1,5 @@
+import { expandedRequests, expandedPickups } from "../demo/records.js";
+
 export const initialPickups = [
   {
     id: "maya",
@@ -61,11 +63,13 @@ export const initialPickups = [
     slot: "1:30 – 2:00 PM",
     status: "Approved",
   },
-].map((pickup) => ({
-  ...pickup,
-  date: "2026-10-14",
-  fullPickupDate: "Wed, Oct 14",
-}));
+]
+  .map((pickup) => ({
+    ...pickup,
+    date: "2026-10-14",
+    fullPickupDate: "Wed, Oct 14",
+  }))
+  .concat(expandedPickups);
 
 export const waitingRequests = [
   {
@@ -139,10 +143,13 @@ export const initialRequests = [
   ...waitingRequests,
   ...initialPickups.map((p) => ({
     ...p,
-    pickup: `Wed, Oct 14 · ${p.time}`,
-    sent: "Oct 12, 3:30 PM",
-    status: "Approved",
+    pickup: p.pickup || `Wed, Oct 14 · ${p.time}`,
+    sent: p.sent || "Oct 12, 3:30 PM",
+    status: p.id.startsWith("demo-request-") ? p.status : "Approved",
   })),
+  ...expandedRequests.filter(
+    (request) => !expandedPickups.some((pickup) => pickup.id === request.id),
+  ),
   ...approvedNames.map(([name, studentId], i) => ({
     id: `approved-${i}`,
     name,

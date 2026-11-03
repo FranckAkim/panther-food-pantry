@@ -43,6 +43,22 @@ works consistently in Windows checkouts and Linux CI.
 
 The sign-in pages show sample accounts. Mock records persist per browser origin, so `localhost` and `127.0.0.1` have separate demo data.
 
+The expanded fictional dataset seeds 55 students, 68 requests, 34 pickups, 62 inventory items,
+28 donations, 33 pickup slots, and 100 audit entries. Its walkthrough calendar is anchored to
+October 14, 2026; those dates are sample data, not the current date. On an existing browser,
+new records are added once by ID while edited records remain unchanged. The fixtures live in
+`src/features/demo/` and the feature `data.js` files. No Supabase records are created by
+loading the demo.
+
+The shared Supabase project has a separate optional seed in `../supabase/demo_seed.sql`:
+36 `[DEMO]` inventory items, 72 `DEMO-` stock lots, and 72 stock-history entries. It can be
+rerun without duplicating records. These products are active and visible through live
+availability, so remove them before any real pantry use. The frontend requests, students,
+donations, and pickup records remain fictional browser-only data; the live backend currently
+has no demo student accounts or requests.
+`../supabase/demo_cleanup.sql` removes only the marked inventory fixtures and stops if any
+demo lot has later stock activity that needs review.
+
 ## Supabase integration
 
 Use Node.js 22, matching CI. The installed `@supabase/supabase-js` client is wrapped by `lib/supabase.js` and the injectable `lib/pantryApi.js` service. Copy `.env.example` to `.env` for the public project URL and publishable key; never add a service-role key. Setting these variables does not enable live data in the existing screens.

@@ -105,7 +105,7 @@ test("audit entries describe successful changes and ignore no-ops", () => {
   assert.equal(entries.length, 1);
   assert.equal(entries[0].action, "Account deactivated");
   assert.equal(entries[0].actor, "Taylor Brooks");
-  assert.equal(initialAuditLog.length, 52);
+  assert.equal(initialAuditLog.length, 100);
 });
 test("pantry actions enter the audit log without duplicate donation inventory events", () => {
   const old = [{ id: "r", name: "Student", status: "Waiting" }];
