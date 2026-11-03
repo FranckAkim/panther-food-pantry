@@ -107,6 +107,11 @@ test("audit entries describe successful changes and ignore no-ops", () => {
   assert.equal(entries[0].actor, "Taylor Brooks");
   assert.equal(initialAuditLog.length, 100);
 });
+test("completed demo requests are audited on their pickup date", () => {
+  const completed = initialAuditLog.filter((entry) => entry.action === "Request completed");
+  assert.equal(completed.length, 11);
+  assert.ok(completed.every((entry) => entry.timestamp.startsWith("2026-10-14T")));
+});
 test("pantry actions enter the audit log without duplicate donation inventory events", () => {
   const old = [{ id: "r", name: "Student", status: "Waiting" }];
   assert.equal(

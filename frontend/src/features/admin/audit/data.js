@@ -74,7 +74,7 @@ export const initialAuditLog = [
   })),
   ...expandedRequests.map((request, index) => ({
     id: `audit-demo-request-${index + 1}`,
-    timestamp: `2026-10-${index < 29 ? "14" : "13"}T${String(9 + (index % 6)).padStart(2, "0")}:25:00-05:00`,
+    timestamp: `2026-10-${index < 40 ? "14" : "13"}T${String(9 + (index % 6)).padStart(2, "0")}:25:00-05:00`,
     actor: request.status === "Waiting" ? request.name : "Dana Carter",
     action:
       request.status === "Waiting"
