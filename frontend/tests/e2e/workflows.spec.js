@@ -184,9 +184,11 @@ test("admin adds staff, filters reports, and paginates the audit log", async ({ 
   await expect(metrics).toContainText("118");
   await page.getByRole("link", { name: "Audit log", exact: true }).click();
   await page.getByRole("combobox", { name: "Audit date", exact: true }).selectOption("");
+  await page.getByRole("searchbox", { name: "Search person or record" }).fill("Browser Test Staff");
   await expect(page.getByRole("row").filter({ hasText: "Browser Test Staff" })).toContainText(
     "Account created",
   );
+  await page.getByRole("searchbox", { name: "Search person or record" }).clear();
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Showing" })).toContainText(
     "Showing 9–16",

@@ -2,6 +2,7 @@ import { beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { eventName, persistMockValue, readMockValue } from "../src/lib/mockStorage.js";
 import { waitForMockResponse } from "../src/lib/mockLatency.js";
+import { loadExpandedDemoData } from "../src/features/demo/load.js";
 
 beforeEach(() => {
   const storage = new Map();
@@ -38,6 +39,19 @@ test("the session remains usable when browser storage is unavailable or contains
   assert.equal(readMockValue("storage-test-missing", "fallback"), "fallback");
   globalThis.localStorage = { getItem: () => "{invalid" };
   assert.deepEqual(readMockValue("storage-test-fallback", null), { name: "Sample student" });
+});
+
+test("expanded demo records preserve existing browser edits and load only once", () => {
+  localStorage.setItem(
+    "panther-inventory-v1",
+    JSON.stringify([{ id: "black-beans", name: "Edited beans", lots: [] }]),
+  );
+  loadExpandedDemoData();
+  const first = JSON.parse(localStorage.getItem("panther-inventory-v1"));
+  assert.equal(first.find((item) => item.id === "black-beans").name, "Edited beans");
+  assert.ok(first.some((item) => item.name === "Feminine hygiene products"));
+  loadExpandedDemoData();
+  assert.deepEqual(JSON.parse(localStorage.getItem("panther-inventory-v1")), first);
 });
 
 test("mock requests can be cancelled before or while awaiting a response", async () => {
