@@ -1,3 +1,5 @@
+import { expandedRequests } from "../../demo/records.js";
+
 export const auditKey = "panther-audit-log-v1";
 
 const auditExamples = [
@@ -69,5 +71,16 @@ export const initialAuditLog = [
     action: "Stock adjusted",
     record: `Inventory · ${["Canned black beans", "White rice (2 lb)", "Spaghetti", "Cereal"][i % 4]}`,
     change: `${24 + i} → ${23 + i} units · Stock count correction`,
+  })),
+  ...expandedRequests.map((request, index) => ({
+    id: `audit-demo-request-${index + 1}`,
+    timestamp: `2026-10-${index < 40 ? "14" : "13"}T${String(9 + (index % 6)).padStart(2, "0")}:25:00-05:00`,
+    actor: request.status === "Waiting" ? request.name : "Dana Carter",
+    action:
+      request.status === "Waiting"
+        ? "Request submitted"
+        : `Request ${request.status.toLowerCase()}`,
+    record: `Request · ${request.name}`,
+    change: request.status === "Waiting" ? "New food request" : `Submitted → ${request.status}`,
   })),
 ];

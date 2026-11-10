@@ -15,6 +15,7 @@ const slotDays = [
       ["10:30", 5],
       ["11:00", 2],
       ["13:00", 4],
+      ["13:30", 0],
     ],
   ],
   [
@@ -46,6 +47,15 @@ const slotDays = [
       ["13:30", 1],
     ],
   ],
+  ...["2026-10-20", "2026-10-21"].map((date, dayIndex) => [
+    date,
+    ["10:00", "10:30", "11:00", "13:00", "13:30"].map((time, slotIndex) => [
+      time,
+      Array.from({ length: 29 }, (_, index) => index).filter(
+        (index) => index % 2 === dayIndex && index % 5 === slotIndex,
+      ).length,
+    ]),
+  ]),
 ];
 
 export const initialSlots = slotDays.flatMap(([date, slots]) =>
