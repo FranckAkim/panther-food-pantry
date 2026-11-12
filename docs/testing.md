@@ -176,6 +176,20 @@ from the build context. The image installs its own Linux dependencies.
 
 ## Next test stages
 
+### Keyboard and narrow-screen browser coverage
+
+The browser suite also checks skip-link focus, keyboard sign-in, password-help
+dialog dismissal and focus restoration, and staff mobile navigation dismissal.
+At a 390×844 viewport it checks student home/request/history and the staff donation
+screen for page-level horizontal overflow. Closed staff navigation must be hidden
+from keyboard focus; Escape closes the open menu and returns focus to its trigger.
+
+These are targeted mock-UI regression checks, not a full accessibility audit or
+real-device acceptance. Other forms, validation recovery, screen readers, zoom,
+additional viewport sizes, and connected journeys still need testing. Local
+verification uses installed Chrome 155 on Windows because the downloaded
+Playwright Chromium cannot launch on this machine; CI uses its standard Chromium.
+
 1. After UI integration, test the real request/stock contracts and concurrent
    operations through the application, including disabled accounts and denied roles.
 2. Test real email confirmation/delivery with authorized test inboxes and configured

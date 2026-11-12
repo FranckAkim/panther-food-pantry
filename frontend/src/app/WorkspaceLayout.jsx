@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { adminPages } from "./routes.js";
 import { AdminIcon } from "../components/AdminIcon.jsx";
 import { Button } from "../components/ui/Button.jsx";
@@ -18,11 +19,26 @@ export function WorkspaceLayout({
   route,
   notFound,
 }) {
+  const menuTrigger = useRef(null);
+  useEffect(() => {
+    if (!mobileMenu) return;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        setMobileMenu(false);
+        menuTrigger.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMenu, setMobileMenu]);
+
   return (
     <div className="staff-shell">
       <div className="mobile-header">
         <button
+          ref={menuTrigger}
           aria-label="Open navigation"
+          aria-controls="workspace-navigation"
           aria-expanded={mobileMenu}
           onClick={() => setMobileMenu(true)}
         >
@@ -37,7 +53,7 @@ export function WorkspaceLayout({
           onClick={() => setMobileMenu(false)}
         />
       )}
-      <aside className={`staff-sidebar ${mobileMenu ? "is-open" : ""}`}>
+      <aside id="workspace-navigation" className={`staff-sidebar ${mobileMenu ? "is-open" : ""}`}>
         <a className="staff-brand" href={`#/${portal}/dashboard`}>
           <span className="brand-mark">
             <img src="/assets/figma/nav-logo.svg" alt="" />

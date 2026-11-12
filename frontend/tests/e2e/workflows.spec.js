@@ -41,6 +41,75 @@ async function readRecord(page, key) {
   return page.evaluate((key) => JSON.parse(localStorage.getItem(key)), key);
 }
 
+test("keyboard sign-in supports skip navigation, dialog dismissal, and form submission", async ({
+  page,
+}) => {
+  await page.goto("/#/sign-in");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#main-content")).toBeFocused();
+  const email = page.getByRole("textbox", { name: "Email", exact: true });
+  await email.focus();
+  await page.keyboard.type("jordan@pvamu.edu");
+  await page.keyboard.press("Tab");
+  const help = page.getByRole("button", { name: "Forgot password?" });
+  await expect(help).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "Password help" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(help).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.locator('input[name="password"]')).toBeFocused();
+  await page.keyboard.type("Pantry2026!");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Hi, Jordan", exact: true })).toBeVisible();
+});
+
+test.describe("narrow-screen acceptance", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  async function expectNoPageOverflow(page) {
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
+
+  test("student home, request, and history stay within the viewport", async ({ page }) => {
+    await signIn(page, "student");
+    await expectNoPageOverflow(page);
+    await page.getByRole("link", { name: "Request food", exact: true }).click();
+    await expect(page.getByRole("combobox")).toBeVisible();
+    await expectNoPageOverflow(page);
+    await page.getByRole("link", { name: "History", exact: true }).click();
+    await expectNoPageOverflow(page);
+  });
+
+  test("staff navigation hides closed links and supports keyboard dismissal", async ({ page }) => {
+    await signIn(page, "staff");
+    const opener = page.getByRole("button", { name: "Open navigation", exact: true });
+    const sidebar = page.locator("#workspace-navigation");
+    await expect(sidebar).toBeHidden();
+    await opener.focus();
+    await page.keyboard.press("Tab");
+    expect(await sidebar.evaluate((element) => element.contains(document.activeElement))).toBe(
+      false,
+    );
+    await opener.focus();
+    await page.keyboard.press("Enter");
+    await expect(sidebar).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(sidebar).toBeHidden();
+    await expect(opener).toBeFocused();
+    await page.keyboard.press("Enter");
+    await page.getByRole("link", { name: "Donations", exact: true }).click();
+    await expect(sidebar).toBeHidden();
+    await expect(page.getByRole("button", { name: "Save donation", exact: true })).toBeVisible();
+    await expectNoPageOverflow(page);
+  });
+});
+
 test("sign-in rejects invalid credentials, persists a session, and protects routes after logout", async ({
   page,
 }) => {
