@@ -1,7 +1,7 @@
 import { Modal } from "../../../components/ui/Modal.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 
-export function NoShowDialog({ setNoShowPickup, setPickups, noShowPickup, setRequests, notify }) {
+export function NoShowDialog({ setNoShowPickup, noShowPickup, confirmNoShow }) {
   return (
     <Modal
       title="Mark this pickup as a no-show?"
@@ -11,21 +11,7 @@ export function NoShowDialog({ setNoShowPickup, setPickups, noShowPickup, setReq
           <Button variant="secondary" onClick={() => setNoShowPickup(null)}>
             Go back
           </Button>
-          <Button
-            variant="danger"
-            asyncAction
-            loadingLabel="Saving…"
-            onClick={() => {
-              setPickups((current) =>
-                current.map((p) => (p.id === noShowPickup.id ? { ...p, status: "No-show" } : p)),
-              );
-              setRequests((current) =>
-                current.map((r) => (r.id === noShowPickup.id ? { ...r, status: "No-show" } : r)),
-              );
-              notify(`${noShowPickup.name} marked as a no-show.`);
-              setNoShowPickup(null);
-            }}
-          >
+          <Button variant="danger" asyncAction loadingLabel="Saving…" onClick={confirmNoShow}>
             Mark no-show
           </Button>
         </>

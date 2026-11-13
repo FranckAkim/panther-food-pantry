@@ -12,16 +12,22 @@ import { Asset } from "../components/Asset.jsx";
 import plusWhite from "../../../assets/stock-plus-white.svg";
 import { Search } from "../components/Search.jsx";
 import { Filter } from "../components/Filter.jsx";
-import { categories } from "../data/inventory.js";
-import { DataLoader } from "../../../components/loading/DataLoader.jsx";
+import { categoryOptions } from "../categories.js";
+import { createItem } from "../../../api/inventory.js";
+import { savePhotoChange } from "../../../api/itemPhotos.js";
+import { notifyError } from "../../../components/Notifications.jsx";
+import { ItemPhoto } from "../../../components/ui/ItemPhoto.jsx";
+import { affected } from "../../../api/keys.js";
+import { useRefresh } from "../../../lib/queryClient.js";
 import { StockTable } from "../components/StockTable.jsx";
 import { LinkButton } from "../components/LinkButton.jsx";
-import { dateText, id, today } from "../utils/formatters.js";
+import { dateText } from "../utils/formatters.js";
 import { Status } from "../components/Status.jsx";
 import { EmptyState } from "../../../components/ui/EmptyState.jsx";
 import { ItemEditor } from "../components/ItemEditor.jsx";
 
-export function InventoryPage({ items, setItems, showItem, notify }) {
+export function InventoryPage({ items, showItem, notify }) {
+  const refresh = useRefresh();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [category, setCategory] = useState("");
@@ -67,16 +73,12 @@ export function InventoryPage({ items, setItems, showItem, notify }) {
           onChange={(e) => setCategory(e.target.value)}
         >
           <option value="">All categories</option>
-          {categories.map((c) => (
+          {categoryOptions(items).map((c) => (
             <option key={c}>{c}</option>
           ))}
         </select>
       </div>
-      <DataLoader
-        queryKey={JSON.stringify([query, filter, category, offset])}
-        initialLoading={false}
-        label="Loading inventory…"
-      >
+      <>
         <StockTable className="stock-inventory-table">
           <thead>
             <tr>
@@ -92,9 +94,12 @@ export function InventoryPage({ items, setItems, showItem, notify }) {
             {visible.map((item) => (
               <tr key={item.id}>
                 <td>
-                  <LinkButton underline onClick={() => showItem(item.id)}>
-                    {item.name}
-                  </LinkButton>
+                  <span className="stock-item-cell">
+                    <ItemPhoto path={item.imagePath} />
+                    <LinkButton underline onClick={() => showItem(item.id)}>
+                      {item.name}
+                    </LinkButton>
+                  </span>
                 </td>
                 <td className="muted">{item.category}</td>
                 <td className="stock-number">
@@ -136,30 +141,28 @@ export function InventoryPage({ items, setItems, showItem, notify }) {
             </Button>
           </div>
         </div>
-      </DataLoader>
+      </>
       {adding && (
         <ItemEditor
+          items={items}
           onClose={() => setAdding(false)}
-          onSave={(data) => {
-            const itemId = id();
-            const newItem = {
-              ...data,
-              id: itemId,
-              changes: [],
-              lots: [
-                {
-                  id: id(),
-                  quantity: data.quantity,
-                  expiry: data.expiry,
-                  shelf: data.shelf,
-                  received: today(),
-                  source: "Initial stock",
-                },
-              ],
-            };
-            setItems((old) => [...old, newItem]);
+          onSave={async (data) => {
+            const created = await createItem(data);
+            // The item exists now, so a failed upload must not keep the form open for a retry
+            // (that would try to add the item twice). The photo can be added from the item page.
+            let photoError = null;
+            try {
+              await savePhotoChange(created.id, data.photo);
+            } catch (error) {
+              photoError = error;
+            }
+            await refresh(affected.inventory);
             setAdding(false);
-            notify(`${data.name} added to inventory.`);
+            if (photoError)
+              notifyError(
+                `${data.name} was added, but its photo wasn't saved: ${photoError.message} Use Edit item to try again.`,
+              );
+            else notify(`${data.name} added to inventory.`);
           }}
         />
       )}

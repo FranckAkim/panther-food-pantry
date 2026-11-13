@@ -226,43 +226,108 @@
   position: relative;
 }
 .student-avatar {
+  display: inline-flex;
   width: 44px;
   height: 44px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
   background: var(--purple-tint);
-  color: var(--purple);
-  font-size: 12px;
-  font-weight: 700;
+  overflow: hidden;
+  cursor: pointer;
 }
-.student-account-menu {
-  position: absolute;
-  right: 0;
-  top: 52px;
-  min-width: 210px;
+.student-avatar .avatar {
+  width: 100%;
+  height: 100%;
+}
+.student-avatar:hover .avatar--initials {
+  background: #e4d9ef;
+}
+
+/* Profile drawer (rendered outside .student-app) */
+.profile-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.profile-drawer-person {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.profile-drawer-person > div {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: white;
-  border: 1px solid var(--line);
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 8px 28px #1f1a2e15;
-  z-index: 15;
-  font-size: 14px;
+  min-width: 0;
 }
-.student-account-menu > span {
+.profile-drawer-person strong {
+  font-size: 18px;
+  line-height: 24px;
+}
+.profile-drawer-person span {
+  color: var(--muted);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.profile-drawer-details {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.profile-drawer-details dt {
+  margin-bottom: 2px;
   color: var(--muted);
   font-size: 12px;
 }
-.student-account-menu button {
-  background: var(--purple-tint);
+.profile-drawer-details dd {
+  margin: 0;
+  font-size: 14px;
+}
+.profile-drawer-photo h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.profile-drawer-photo p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.profile-drawer-photo .profile-drawer-preview-note {
+  color: var(--ink);
+  font-weight: 600;
+}
+.profile-drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.profile-photo-pick {
+  position: relative;
+  cursor: pointer;
+}
+.profile-photo-pick:focus-within {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+.profile-photo-pick.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.profile-photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
   border: 0;
-  border-radius: 8px;
-  padding: 8px;
-  color: var(--purple);
-  margin-top: 12px;
-  text-align: left;
 }
 .student-main {
   display: flex;
@@ -662,6 +727,93 @@
 .student-food-picker .field {
   max-width: 560px;
 }
+.student-step-title {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+}
+.student-food-picker > .muted {
+  margin-top: 4px;
+}
+.student-food-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.student-food-filters button {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.student-food-filters button[aria-pressed="true"] {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: white;
+}
+.student-food-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.student-food-picker > .muted + .student-food-grid {
+  margin-top: 16px;
+}
+.student-food-option {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.student-food-option:hover {
+  border-color: var(--border);
+}
+.student-food-option[aria-pressed="true"] {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 1px var(--purple);
+}
+.student-food-option > span:last-child {
+  padding: 10px 12px 12px;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.student-food-chosen {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+.student-food-chosen .item-photo {
+  width: 72px;
+  height: 54px;
+  border-radius: 8px;
+}
+.student-food-chosen > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.student-food-chosen strong {
+  font-size: 16px;
+  line-height: 24px;
+}
 .student-pickup-info {
   flex-wrap: wrap;
 }
@@ -689,6 +841,10 @@
 @media (max-width: 650px) {
   .student-food-picker {
     margin-right: 0;
+  }
+  .student-food-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
   }
   .student-days button {
     width: 64px;

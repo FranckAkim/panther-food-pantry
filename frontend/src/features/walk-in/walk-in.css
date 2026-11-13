@@ -156,3 +156,7 @@
   opacity: 1;
   -webkit-text-fill-color: var(--muted);
 }
+.walk-in-profile .student-photo-check {
+  align-items: flex-start;
+  margin-bottom: 16px;
+}

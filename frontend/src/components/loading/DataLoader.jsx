@@ -1,20 +1,28 @@
-import { useState, useEffect } from "react";
-import { waitForMockResponse, mockLatency } from "../../lib/mockLatency.js";
 import { LoadingState } from "./LoadingState.jsx";
+import { Button } from "../ui/Button.jsx";
 
-export function DataLoader({ queryKey, label, children, initialLoading = true, compact = false }) {
-  const [ready, setReady] = useState(() => (initialLoading ? null : queryKey));
-  useEffect(() => {
-    const controller = new AbortController();
-    waitForMockResponse(initialLoading ? mockLatency.page : mockLatency.query, controller.signal)
-      .then(() => setReady(queryKey))
-      .catch(() => {});
-    return () => controller.abort();
-  }, [queryKey, initialLoading]);
-  const loading = ready !== queryKey;
+/**
+ * Shows a loading state, an error with a retry button, or the content.
+ * Pass one or more TanStack queries: <DataLoader queries={[a, b]}>.
+ */
+export function DataLoader({ queries = [], label, children, compact = false }) {
+  const list = Array.isArray(queries) ? queries : [queries];
+  const failed = list.find((query) => query?.isError && !query.data);
+  const loading = list.some((query) => query?.isPending && !query.data);
   return (
     <div className="data-loader" aria-busy={loading}>
-      {loading ? <LoadingState label={label} compact={compact} /> : children}
+      {failed ? (
+        <div className={`loading-state${compact ? " loading-state--compact" : ""}`} role="alert">
+          <span>{failed.error?.message || "This information could not be loaded."}</span>
+          <Button variant="secondary" onClick={() => list.forEach((query) => query?.refetch())}>
+            Try again
+          </Button>
+        </div>
+      ) : loading ? (
+        <LoadingState label={label} compact={compact} />
+      ) : (
+        children
+      )}
     </div>
   );
 }

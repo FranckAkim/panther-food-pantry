@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { adminPages } from "./routes.js";
 import { AdminIcon } from "../components/AdminIcon.jsx";
 import { Button } from "../components/ui/Button.jsx";
 import { WorkspaceContent } from "./WorkspaceContent.jsx";
+import { Avatar } from "../components/ui/Avatar.jsx";
+import { ProfileDrawer } from "../components/ProfileDrawer.jsx";
+import { useMyPhoto } from "../hooks/useProfilePhotos.js";
 
 export function WorkspaceLayout({
   mobileMenu,
@@ -13,11 +17,15 @@ export function WorkspaceLayout({
   waitingCount,
   profile,
   signOut,
+  notify,
   page,
   contentProps,
   route,
   notFound,
 }) {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { url: photo } = useMyPhoto(profile.id);
+  const roleLabel = portal === "admin" ? "Administrator" : "Pantry staff";
   return (
     <div className="staff-shell">
       <div className="mobile-header">
@@ -73,19 +81,22 @@ export function WorkspaceLayout({
           ))}
         </nav>
         <div className="staff-account">
-          <div className="staff-account-person">
-            <span className="staff-avatar">
-              {profile.name
-                .split(" ")
-                .map((word) => word[0])
-                .slice(0, 2)
-                .join("")}
-            </span>
+          <button
+            type="button"
+            className="staff-account-person"
+            aria-haspopup="dialog"
+            aria-label={`Your profile: ${profile.name}, ${roleLabel}`}
+            onClick={() => {
+              setMobileMenu(false);
+              setProfileOpen(true);
+            }}
+          >
+            <Avatar name={profile.name} src={photo} size="sm" className="staff-avatar" />
             <span>
               <strong>{profile.name}</strong>
-              <small>{portal === "admin" ? "Administrator" : "Pantry staff"}</small>
+              <small>{roleLabel}</small>
             </span>
-          </div>
+          </button>
           <Button
             className="staff-signout"
             asyncAction
@@ -97,6 +108,15 @@ export function WorkspaceLayout({
           </Button>
         </div>
       </aside>
+      {profileOpen && (
+        <ProfileDrawer
+          profile={profile}
+          details={[["Role", roleLabel]]}
+          photoHint="Other pantry staff and admins see your photo beside your name. Students don't see it."
+          onClose={() => setProfileOpen(false)}
+          notify={notify}
+        />
+      )}
       <main className="staff-content" id="main-content" tabIndex={-1}>
         {
           <WorkspaceContent

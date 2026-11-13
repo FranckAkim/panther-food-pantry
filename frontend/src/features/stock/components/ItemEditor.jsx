@@ -1,11 +1,18 @@
+import { useState } from "react";
 import { Modal } from "../../../components/ui/Modal.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { AsyncForm } from "../../../components/ui/AsyncForm.jsx";
 import { Field } from "../../../components/ui/Field.jsx";
-import { categories } from "../data/inventory.js";
+import { categoryOptions } from "../categories.js";
 import { DateInput } from "./DateInput.jsx";
+import { PhotoField } from "./PhotoField.jsx";
+import { ShelfSelect } from "./ShelfSelect.jsx";
+import { UnitSelect } from "./UnitSelect.jsx";
+import { usePendingAction } from "../../../components/loading/ActionContext.js";
 
-export function ItemEditor({ item, onClose, onSave }) {
+export function ItemEditor({ item, items = [], onClose, onSave }) {
+  const [photo, setPhoto] = useState(null);
+  const { pending } = usePendingAction();
   return (
     <Modal
       title={item ? "Edit item" : "Add item"}
@@ -27,11 +34,12 @@ export function ItemEditor({ item, onClose, onSave }) {
         onSubmit={(e, formData) => {
           e.preventDefault();
           const f = formData;
-          onSave({
+          return onSave({
             name: f.get("name").trim(),
             category: f.get("category"),
             unit: f.get("unit").trim(),
             alert: Number(f.get("alert")),
+            photo,
             ...(!item
               ? {
                   quantity: Number(f.get("quantity")),
@@ -45,25 +53,30 @@ export function ItemEditor({ item, onClose, onSave }) {
         <Field label="Item name">
           <input className="input" name="name" required defaultValue={item?.name} />
         </Field>
+        <PhotoField
+          currentPath={item?.imagePath}
+          value={photo}
+          onChange={setPhoto}
+          disabled={!!pending}
+        />
         <div className="form-grid">
           <Field label="Category">
             <select
               className="select"
               name="category"
-              defaultValue={item?.category || categories[0]}
+              defaultValue={item?.category || "Canned goods"}
             >
-              {categories.map((c) => (
+              {categoryOptions(items, item?.category).map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
           </Field>
           <Field label="Counted in">
-            <input
-              className="input"
+            <UnitSelect
               name="unit"
-              placeholder="e.g. cans"
               required
-              defaultValue={item?.unit || "cans"}
+              current={item?.unitName}
+              defaultValue={item?.unitName || "can"}
             />
           </Field>
           <Field label="Low-stock alert at">
@@ -90,9 +103,11 @@ export function ItemEditor({ item, onClose, onSave }) {
               </Field>
               <Field label="Expires on">
                 <DateInput name="expiry" />
+                <small className="muted">Leave empty for items that don't expire.</small>
               </Field>
               <Field label="Shelf or bin">
-                <input className="input" name="shelf" placeholder="A2" required />
+                <ShelfSelect name="shelf" />
+                <small className="muted">Needed when the opening quantity is more than 0.</small>
               </Field>
             </>
           )}

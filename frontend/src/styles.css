@@ -404,6 +404,120 @@ textarea {
   color: var(--muted);
   margin-top: 6px;
 }
+/* Item photos (components/ui/ItemPhoto.jsx) */
+.item-photo {
+  display: block;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: var(--purple-tint);
+}
+.item-photo--thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}
+.item-photo--card {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+}
+.item-photo--large {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+}
+.item-photo--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--purple);
+}
+.item-photo--empty svg {
+  width: 45%;
+  height: 45%;
+  max-width: 44px;
+  opacity: 0.5;
+}
+/* People: a photo, or initials when there is none */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--purple-tint);
+  color: var(--purple);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+.avatar--sm {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+}
+.avatar--md {
+  width: 44px;
+  height: 44px;
+  font-size: 13px;
+}
+.avatar--lg {
+  width: 72px;
+  height: 72px;
+  font-size: 22px;
+}
+.avatar--xl {
+  width: 112px;
+  height: 112px;
+  font-size: 34px;
+}
+.person-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+div.person-cell,
+dd.person-cell {
+  display: flex;
+}
+.student-photo-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.student-photo-check figcaption {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Side drawer: the shared HeroUI modal as a full-height panel on the right */
+.pantry-drawer-wrapper {
+  justify-content: flex-end;
+  align-items: stretch;
+  overflow: hidden;
+}
+.pantry-drawer {
+  width: 420px;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border-right: 0;
+  border-radius: 16px 0 0 16px;
+}
+.pantry-drawer-footer {
+  justify-content: flex-start;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 480px) {
+  .pantry-drawer {
+    width: 100vw;
+    border-radius: 0;
+  }
+}
 .skip-link {
   position: fixed;
   top: -100px;
@@ -549,14 +663,30 @@ textarea {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  margin: 0 -8px;
+  padding: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: content-box;
+}
+.staff-account-person:hover {
+  background: #ffffff14;
+}
+.staff-account-person:focus-visible {
+  outline: 2px solid #eaaa00;
+  outline-offset: 2px;
 }
 .staff-avatar {
   height: 36px;
   width: 36px;
-  display: grid;
-  place-items: center;
   background: #582c83;
-  border-radius: 50%;
+  color: #fff;
   font-size: 12px;
   font-weight: 600;
 }

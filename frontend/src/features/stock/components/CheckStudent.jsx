@@ -21,15 +21,15 @@ export function CheckStudent({ student, onClose, onSave }) {
       <AsyncForm
         id="stock-check-id"
         className="stack"
-        onSubmit={(e, formData) => {
+        onSubmit={(e) => {
           e.preventDefault();
-          onSave();
+          return onSave();
         }}
       >
         <p>Match the name and student ID on the student's card.</p>
         <div className="stock-id-preview">
           <strong>{student.name}</strong>
-          <span>{student.id}</span>
+          <span>{student.studentId}</span>
         </div>
         <label className="stock-check-label">
           <input type="checkbox" required />I checked the student ID card

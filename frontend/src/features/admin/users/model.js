@@ -1,77 +1,59 @@
 export const roleLabel = (role) =>
   ({ student: "Student", staff: "Staff", admin: "Admin" })[role] || role;
 
-export const matchesEmail = (user, email = "") =>
-  [user.email, ...(user.aliases || [])].some(
-    (value) => value && value.toLowerCase() === email.toLowerCase(),
-  );
-
-export function mergeAdminUsers(users, students = [], accounts = []) {
-  const merged = users.map((user) => ({ ...user }));
-  for (const account of accounts) {
-    const existing = merged.find(
-      (user) =>
-        matchesEmail(user, account.email) ||
-        (account.studentId && user.studentId === account.studentId),
-    );
-    if (existing) {
-      if (!existing.email) existing.email = account.email;
-      else if (!matchesEmail(existing, account.email))
-        existing.aliases = [...(existing.aliases || []), account.email];
-      existing.provisional = false;
-    } else
-      merged.push({
-        id: account.studentId || account.email,
-        name: account.name,
-        email: account.email,
-        studentId: account.studentId,
-        role: account.role,
-        active: true,
-        lastSignIn: null,
-      });
-  }
-  for (const student of students) {
-    if (!merged.some((user) => user.studentId === student.id))
-      merged.push({
-        id: `student-${student.id}`,
-        studentId: student.id,
+/** Accounts plus walk-in (provisional) students, who have no sign-in account. */
+export function directoryUsers(accounts = [], students = []) {
+  return [
+    ...accounts,
+    ...students
+      .filter((student) => student.provisional)
+      .map((student) => ({
+        id: student.id,
         name: student.name,
-        email: student.email || "",
+        email: "",
+        studentId: student.studentId,
         role: "student",
         active: true,
-        provisional: Boolean(student.provisional),
+        provisional: true,
         lastSignIn: null,
-      });
-  }
-  return merged;
+      })),
+  ];
 }
 
-export function validateUserChange(users, target, patch, actorEmail) {
+/**
+ * Checks an access change before sending it. The database enforces the same rules;
+ * this gives a clear message without a round trip. Returns "" when the change is allowed.
+ */
+export function validateAccessChange(users, target, patch, actorId) {
   if (!target) return "This user no longer exists.";
-  if (matchesEmail(target, actorEmail))
+  if (target.provisional) return "This student has no sign-in account to change.";
+  if (target.id === actorId)
     return "You cannot change your own role or deactivate your own account.";
   if (patch.role && !["student", "staff", "admin"].includes(patch.role))
     return "Choose a valid role.";
-  if (
+  const removesAdmin =
     target.role === "admin" &&
     target.active &&
-    (patch.active === false || (patch.role && patch.role !== "admin")) &&
-    users.filter((user) => user.role === "admin" && user.active).length <= 1
-  )
+    (patch.active === false || (patch.role && patch.role !== "admin"));
+  if (removesAdmin && users.filter((user) => user.role === "admin" && user.active).length <= 1)
     return "Keep at least one active admin account.";
-  if (patch.role && patch.role !== "student") {
-    const email = patch.email || target.email;
-    if (!/^[^\s@]+@pvamu\.edu$/.test(email || ""))
-      return "Enter a campus email address for this account.";
-    if (users.some((user) => user.id !== target.id && matchesEmail(user, email)))
-      return "An account with this email already exists.";
-  }
-  if (patch.role === "student") {
-    const studentId = patch.studentId || target.studentId;
-    if (!/^P\d{8}$/.test(studentId || ""))
-      return "Enter a student ID: P followed by eight numbers.";
-    if (users.some((user) => user.id !== target.id && user.studentId === studentId))
-      return "That student ID belongs to another user.";
-  }
   return "";
+}
+
+/** Finds the account that will receive staff access, or explains why it cannot. */
+export function staffCandidate(accounts, email) {
+  const address = String(email || "")
+    .trim()
+    .toLowerCase();
+  if (!/^[^\s@]+@pvamu\.edu$/.test(address))
+    return { error: "Use a campus email address ending in @pvamu.edu." };
+  const account = accounts.find((user) => user.email?.toLowerCase() === address);
+  if (!account)
+    return {
+      error:
+        "No account uses this email yet. Ask them to create one on the sign-up page with this email, then add them here.",
+    };
+  if (account.role !== "student")
+    return { error: `${account.name} already has ${roleLabel(account.role)} access.` };
+  return { account };
 }

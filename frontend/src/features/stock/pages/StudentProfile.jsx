@@ -7,9 +7,13 @@ import { Badge } from "../../../components/ui/Badge.jsx";
 import { Asset } from "../components/Asset.jsx";
 import checkIcon from "../../../assets/stock-check.svg";
 import { CheckStudent } from "../components/CheckStudent.jsx";
-import { dateText, today } from "../utils/formatters.js";
+import { verifyStudentId } from "../../../api/operations.js";
+import { affected } from "../../../api/keys.js";
+import { useRefresh } from "../../../lib/queryClient.js";
+import { StudentPhotoCheck } from "../../../components/AccountAvatar.jsx";
 
-export function StudentProfile({ student, setStudents, navigate, notify }) {
+export function StudentProfile({ student, navigate, notify }) {
+  const refresh = useRefresh();
   const [checking, setChecking] = useState(false);
   return (
     <>
@@ -21,11 +25,18 @@ export function StudentProfile({ student, setStudents, navigate, notify }) {
       </div>
       <PageHeading
         title={student.name}
-        description={student.id}
-        actions={!student.checked && <Button onClick={() => setChecking(true)}>Check ID</Button>}
+        description={student.studentId || "No student ID yet"}
+        actions={!student.idVerified && <Button onClick={() => setChecking(true)}>Check ID</Button>}
       />
       <Card className="stock-profile">
         <h2>Student profile</h2>
+        {!student.provisional && (
+          <StudentPhotoCheck
+            profileId={student.id}
+            name={student.name}
+            className="stock-profile-photo"
+          />
+        )}
         <dl>
           <div>
             <dt>Account</dt>
@@ -36,7 +47,7 @@ export function StudentProfile({ student, setStudents, navigate, notify }) {
           <div>
             <dt>ID card</dt>
             <dd>
-              {student.checked ? (
+              {student.idVerified ? (
                 <span className="stock-checked">
                   <Asset src={checkIcon} />
                   Checked {student.checked}
@@ -80,12 +91,9 @@ export function StudentProfile({ student, setStudents, navigate, notify }) {
         <CheckStudent
           student={student}
           onClose={() => setChecking(false)}
-          onSave={() => {
-            setStudents((old) =>
-              old.map((s) =>
-                s.id === student.id ? { ...s, checked: dateText(today(), false) } : s,
-              ),
-            );
+          onSave={async () => {
+            await verifyStudentId(student);
+            await refresh(affected.students);
             setChecking(false);
             notify("Student ID check recorded.");
           }}

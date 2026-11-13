@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { usePersistedState } from "../../hooks/usePersistedState.js";
-import { initialStudents } from "../stock/data/students.js";
 import { notifyError } from "../../components/Notifications.jsx";
-import { waitForMockResponse as mockDelay } from "../../lib/mockLatency.js";
+import { createProvisionalStudent, findStudent as lookUpStudent } from "../../api/operations.js";
+import { affected } from "../../api/keys.js";
+import { dayLabel, pantryToday } from "../../api/time.js";
+import { useRefresh } from "../../lib/queryClient.js";
+import { writeSession } from "../../hooks/useSessionState.js";
+import { ACTIVE_PICKUP_KEY } from "../operations/hooks/useOperations.js";
 
 export function useWalkIn({ navigate, notify }) {
+  const refresh = useRefresh();
   const [studentId, setStudentId] = useState("");
   const [searchedId, setSearchedId] = useState("");
   const [fullName, setFullName] = useState("");
@@ -12,14 +16,11 @@ export function useWalkIn({ navigate, notify }) {
   const [match, setMatch] = useState(null);
   const [searchState, setSearchState] = useState("idle");
   const [saving, setSaving] = useState(false);
-  const [students, setStudents] = usePersistedState("panther-students-v1", initialStudents);
-  const studentsRef = useRef(students);
   const operation = useRef(0);
   const busy = useRef(false);
-  studentsRef.current = students;
   const hasResult = searchState === "found" || searchState === "not-found";
 
-  // Ignore pending mock responses after navigating away.
+  // Ignore responses that arrive after leaving the page or starting a new search.
   useEffect(
     () => () => {
       operation.current += 1;
@@ -49,22 +50,20 @@ export function useWalkIn({ navigate, notify }) {
     busy.current = true;
     setStudentId(nextId);
     setSearchState("searching");
-
     setMatch(null);
     setFullName("");
     setIdChecked(false);
     try {
-      await mockDelay(650);
+      const existing = await lookUpStudent(nextId);
       if (token !== operation.current) return;
-      const existing = studentsRef.current.find((student) => student.id.toUpperCase() === nextId);
       setSearchedId(nextId);
-      setMatch(existing || null);
+      setMatch(existing);
       setFullName(existing?.name || "");
       setSearchState(existing ? "found" : "not-found");
-    } catch {
+    } catch (error) {
       if (token !== operation.current) return;
       setSearchState("idle");
-      notifyError("The search could not be completed. Please try again.");
+      notifyError(error.message || "The search could not be completed. Please try again.");
     } finally {
       if (token === operation.current) busy.current = false;
     }
@@ -88,62 +87,46 @@ export function useWalkIn({ navigate, notify }) {
     const token = ++operation.current;
     busy.current = true;
     setSaving(true);
-
     try {
-      await mockDelay(match ? 400 : 850);
+      const student =
+        match ||
+        (await createProvisionalStudent({
+          studentId: searchedId,
+          name: fullName.trim(),
+          idChecked: true,
+        }).then((created) => ({
+          kind: "provisional",
+          id: created.id,
+          name: created.full_name,
+          studentId: created.student_id,
+          firstVisit: true,
+        })));
       if (token !== operation.current) return;
-      // Recheck after the simulated request to avoid duplicate profiles.
-      const existing = studentsRef.current.find(
-        (student) => student.id.toUpperCase() === searchedId,
-      );
-      const now = new Date();
-      const checked = now.toLocaleDateString("en-US", {
-        timeZone: "America/Chicago",
-        month: "short",
-        day: "numeric",
-      });
-      const student = existing || {
-        name: fullName.trim(),
-        id: searchedId,
-        provisional: true,
-        checked,
-        lastPickup: "—",
-        request: "",
-      };
-      const pickup = {
-        id: `walk-in-${crypto.randomUUID()}`,
+      const today = pantryToday();
+      writeSession(ACTIVE_PICKUP_KEY, {
+        id: `walk-in-${student.id}`,
+        requestId: null,
+        kind: student.kind,
+        recipientId: student.id,
         name: student.name,
-        studentId: searchedId,
+        studentId: student.studentId,
         time: "Walk-in",
-        date: now.toLocaleDateString("en-CA", { timeZone: "America/Chicago" }),
-        fullPickupDate: now.toLocaleDateString("en-US", {
-          timeZone: "America/Chicago",
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        }),
+        slot: null,
+        date: today,
+        fullPickupDate: dayLabel(today),
         note: "",
-        firstVisit: !existing || student.lastPickup === "—",
+        firstVisit: student.firstVisit,
         idChecked: true,
-        status: "Approved",
-      };
-      localStorage.setItem("panther-active-pickup", JSON.stringify(pickup));
-      setStudents((current) =>
-        current.some((entry) => entry.id.toUpperCase() === searchedId)
-          ? current.map((entry) =>
-              entry.id.toUpperCase() === searchedId ? { ...entry, checked } : entry,
-            )
-          : [...current, student],
-      );
+      });
+      if (!match) await refresh(affected.students);
       notify?.(
-        existing
+        match
           ? "Student ready for a walk-in pickup."
           : "Provisional profile created. Add items to this pickup.",
       );
       navigate("/staff/distribution");
-    } catch {
-      if (token === operation.current)
-        notifyError("Your browser could not save this pickup. Enable local storage and try again.");
+    } catch (error) {
+      if (token === operation.current) notifyError(error.message);
     } finally {
       if (token === operation.current) {
         busy.current = false;

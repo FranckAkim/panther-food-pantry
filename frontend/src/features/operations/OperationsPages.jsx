@@ -8,9 +8,15 @@ import { PickupsPage } from "./pages/PickupsPage.jsx";
 import { DistributionPage } from "./pages/DistributionPage.jsx";
 import { DeclineRequestDialog } from "./components/DeclineRequestDialog.jsx";
 import { NoShowDialog } from "./components/NoShowDialog.jsx";
+import { DataLoader } from "../../components/loading/DataLoader.jsx";
+import { Card } from "../../components/ui/Card.jsx";
+import { EmptyState } from "../../components/ui/EmptyState.jsx";
 
 export function StaffRequests({ page, navigate, notify }) {
   const {
+    queries,
+    today,
+    pickupDate,
     waitingCount,
     dashboardPickups,
     lowStockItems,
@@ -44,7 +50,10 @@ export function StaffRequests({ page, navigate, notify }) {
     setQuantity,
     displayedItems,
     setItems,
+    setItemQty,
     items,
+    units,
+    requestedFood,
     completePickup,
     declining,
     setDeclining,
@@ -52,8 +61,7 @@ export function StaffRequests({ page, navigate, notify }) {
     reason,
     setReason,
     noShowPickup,
-    setPickups,
-    setRequests,
+    confirmNoShow,
   } = useOperations({ page, navigate, notify });
   const textLink = (text, destination) => (
     <button className="sr-text-link" onClick={() => navigate(destination)}>
@@ -70,16 +78,22 @@ export function StaffRequests({ page, navigate, notify }) {
   return (
     <div className="staff-requests">
       {page === "dashboard" && (
-        <DashboardPage
-          walkInButton={walkInButton}
-          navigate={navigate}
-          waitingCount={waitingCount}
-          textLink={textLink}
-          dashboardPickups={dashboardPickups}
-          lowStockItems={lowStockItems}
-          expiringLots={expiringLots}
-          openDistribution={openDistribution}
-        />
+        <DataLoader
+          queries={[queries.requests, queries.pickups, queries.inventory]}
+          label="Loading dashboard…"
+        >
+          <DashboardPage
+            today={today}
+            walkInButton={walkInButton}
+            navigate={navigate}
+            waitingCount={waitingCount}
+            textLink={textLink}
+            dashboardPickups={dashboardPickups}
+            lowStockItems={lowStockItems}
+            expiringLots={expiringLots}
+            openDistribution={openDistribution}
+          />
+        </DataLoader>
       )}
 
       {page === "requests" && (
@@ -95,20 +109,35 @@ export function StaffRequests({ page, navigate, notify }) {
           navigate={navigate}
           approve={approve}
           openDecline={openDecline}
+          requestsQuery={queries.requests}
         />
       )}
 
-      {page === "request-detail" && activeRequest && (
-        <RequestDetailsPage
-          textLink={textLink}
-          activeRequest={activeRequest}
-          openDecline={openDecline}
-          approve={approve}
-        />
+      {page === "request-detail" && (
+        <DataLoader queries={queries.requests} label="Loading request…">
+          {activeRequest ? (
+            <RequestDetailsPage
+              textLink={textLink}
+              activeRequest={activeRequest}
+              openDecline={openDecline}
+              approve={approve}
+            />
+          ) : (
+            <Card>
+              <EmptyState
+                title="Request not found"
+                description="It may be older than 60 days. Choose a request from the list."
+              />
+              {textLink("Back to requests", "/staff/requests")}
+            </Card>
+          )}
+        </DataLoader>
       )}
 
       {page === "pickups" && (
         <PickupsPage
+          pickupDate={pickupDate}
+          pickupsQuery={queries.pickups}
           dayOffset={dayOffset}
           dayPickups={dayPickups}
           doneCount={doneCount}
@@ -120,25 +149,40 @@ export function StaffRequests({ page, navigate, notify }) {
         />
       )}
 
-      {page === "distribution" && (
-        <DistributionPage
-          textLink={textLink}
-          selectedPickup={selectedPickup}
-          pending={pending}
-          idChecked={idChecked}
-          setIdChecked={setIdChecked}
-          addItem={addItem}
-          itemId={itemId}
-          setItemId={setItemId}
-          availableCatalog={availableCatalog}
-          quantity={quantity}
-          setQuantity={setQuantity}
-          displayedItems={displayedItems}
-          setItems={setItems}
-          items={items}
-          navigate={navigate}
-          completePickup={completePickup}
-        />
+      {page === "distribution" && !selectedPickup && (
+        <Card>
+          <EmptyState
+            title="No pickup selected"
+            description="Choose a student from today's pickups or record a walk-in."
+          />
+          {textLink("Go to today's pickups", "/staff/pickups")}
+        </Card>
+      )}
+
+      {page === "distribution" && selectedPickup && (
+        <DataLoader queries={queries.inventory} label="Loading stock…">
+          <DistributionPage
+            textLink={textLink}
+            selectedPickup={selectedPickup}
+            pending={pending}
+            idChecked={idChecked}
+            setIdChecked={setIdChecked}
+            addItem={addItem}
+            itemId={itemId}
+            setItemId={setItemId}
+            availableCatalog={availableCatalog}
+            quantity={quantity}
+            setQuantity={setQuantity}
+            displayedItems={displayedItems}
+            setItems={setItems}
+            setItemQty={setItemQty}
+            items={items}
+            units={units}
+            requestedFood={requestedFood}
+            navigate={navigate}
+            completePickup={completePickup}
+          />
+        </DataLoader>
       )}
 
       {declining && (
@@ -153,10 +197,8 @@ export function StaffRequests({ page, navigate, notify }) {
       {noShowPickup && (
         <NoShowDialog
           setNoShowPickup={setNoShowPickup}
-          setPickups={setPickups}
           noShowPickup={noShowPickup}
-          setRequests={setRequests}
-          notify={notify}
+          confirmNoShow={confirmNoShow}
         />
       )}
     </div>

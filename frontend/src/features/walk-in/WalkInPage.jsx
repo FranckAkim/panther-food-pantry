@@ -2,6 +2,7 @@ import { useWalkIn } from "./useWalkIn.js";
 import { PageHeading } from "../../components/ui/PageHeading.jsx";
 import { Field } from "../../components/ui/Field.jsx";
 import { Button } from "../../components/ui/Button.jsx";
+import { StudentPhotoCheck } from "../../components/AccountAvatar.jsx";
 
 export function WalkIn({ navigate, notify }) {
   const {
@@ -83,6 +84,7 @@ export function WalkIn({ navigate, notify }) {
             <h2 id="walk-in-profile-title">
               {match ? "2. Confirm the student" : "2. Create a provisional profile"}
             </h2>
+            {match && <StudentPhotoCheck profileId={match.id} name={match.name} />}
             <div className="walk-in-profile-fields">
               <Field label="Full name">
                 <input

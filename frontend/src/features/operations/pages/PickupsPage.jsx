@@ -4,9 +4,13 @@ import { Asset } from "../components/Asset.jsx";
 import { DataLoader } from "../../../components/loading/DataLoader.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Status } from "../components/Status.jsx";
+import { longDateLabel } from "../../../api/time.js";
 import { EmptyState } from "../../../components/ui/EmptyState.jsx";
+import { AccountAvatar } from "../../../components/AccountAvatar.jsx";
 
 export function PickupsPage({
+  pickupDate,
+  pickupsQuery,
   dayOffset,
   dayPickups,
   doneCount,
@@ -20,7 +24,7 @@ export function PickupsPage({
     <>
       <PageHeading
         title={dayOffset === 0 ? "Today's pickups" : "Pickups"}
-        description={`${new Date(Date.UTC(2026, 9, 14 + dayOffset, 12)).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}${dayPickups.length ? ` · ${doneCount} done · ${pendingCount} to go` : ""}`}
+        description={`${longDateLabel(pickupDate)}${dayPickups.length ? ` · ${doneCount} done · ${pendingCount} to go` : ""}`}
         actions={
           <>
             <div className="sr-day-controls">
@@ -43,38 +47,47 @@ export function PickupsPage({
           </>
         }
       />
-      <DataLoader queryKey={dayOffset} initialLoading={false} label="Loading pickups…">
+      <DataLoader queries={pickupsQuery} label="Loading pickups…">
         {dayPickups.length ? (
           <div className="sr-pickup-slots">
             {[...new Set(dayPickups.map((p) => p.slot || "Walk-in"))].map((slot) => {
               const rows = dayPickups.filter((p) => (p.slot || "Walk-in") === slot);
-              const noShowAt = slot.startsWith("1:30")
-                ? "2:30 PM"
-                : slot.startsWith("1:00")
-                  ? "2:00 PM"
-                  : null;
+              const { noShowAt, booked, capacity } = rows[0];
               return (
                 <Card className="sr-slot" key={slot}>
                   <div className="sr-slot-heading">
                     <div>
                       <strong>{slot}</strong>
-                      <span> · {rows.length} of 5 booked</span>
+                      {capacity ? (
+                        <span>
+                          {" "}
+                          · {booked} of {capacity} booked
+                        </span>
+                      ) : (
+                        <span> · {rows.length} handed out</span>
+                      )}
                     </div>
-                    {rows.some((p) => p.noShowAllowed && p.status === "Approved") ? (
+                    {rows.some((p) => p.noShowAllowed) ? (
                       <span className="sr-overdue">Slot ended · no-show allowed</span>
                     ) : (
-                      noShowAt && <span>No-show allowed after {noShowAt}</span>
+                      noShowAt &&
+                      rows.some((p) => p.status === "Approved") && (
+                        <span>No-show allowed after {noShowAt}</span>
+                      )
                     )}
                   </div>
                   {rows.map((pickup) => (
                     <div className="sr-slot-person" key={pickup.id}>
-                      <div className="sr-slot-person-name">
-                        <strong>{pickup.name}</strong>
-                        <div className="muted">
-                          {pickup.studentId}
-                          {pickup.firstVisit && pickup.status !== "Completed" && (
-                            <span className="sr-first-visit"> · First visit: check ID card</span>
-                          )}
+                      <div className="sr-slot-person-name person-cell">
+                        <AccountAvatar profileId={pickup.recipientId} name={pickup.name} />
+                        <div>
+                          <strong>{pickup.name}</strong>
+                          <div className="muted">
+                            {pickup.studentId}
+                            {pickup.firstVisit && pickup.status !== "Completed" && (
+                              <span className="sr-first-visit"> · First visit: check ID card</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <Status status={pickup.status} />

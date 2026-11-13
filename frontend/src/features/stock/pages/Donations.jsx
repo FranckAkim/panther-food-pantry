@@ -7,7 +7,7 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { RecentDonations } from "../components/donations/RecentDonations.jsx";
 import { DonationDetailsDialog } from "../components/donations/DonationDetailsDialog.jsx";
 
-export function Donations({ items, setItems, donations, setDonations, navigate, notify }) {
+export function Donations({ items, donations, donors, navigate, notify }) {
   const {
     save,
     donorRows,
@@ -22,10 +22,11 @@ export function Donations({ items, setItems, donations, setDonations, navigate, 
     lines,
     setLines,
     updateLine,
+    updateNewItem,
     units,
     setViewing,
     viewing,
-  } = useDonationForm({ items, setItems, donations, setDonations, navigate, notify });
+  } = useDonationForm({ items, donors, notify });
   return (
     <>
       <PageHeading
@@ -50,6 +51,7 @@ export function Donations({ items, setItems, donations, setDonations, navigate, 
               items={items}
               setLines={setLines}
               updateLine={updateLine}
+              updateNewItem={updateNewItem}
             />
           ) : (
             <div className="stock-donation-next" role="status">
