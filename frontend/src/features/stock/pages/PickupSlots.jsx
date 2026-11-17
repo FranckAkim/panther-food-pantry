@@ -1,5 +1,8 @@
-import { usePersistedState } from "../../../hooks/usePersistedState.js";
-import { initialSlots } from "../data/pickupSlots.js";
+import { useQuery } from "@tanstack/react-query";
+import { useSessionState } from "../../../hooks/useSessionState.js";
+import { createSlots, fetchSlots, updateSlotCapacity } from "../../../api/operations.js";
+import { affected, keys } from "../../../api/keys.js";
+import { useRefresh } from "../../../lib/queryClient.js";
 import { useState, useMemo } from "react";
 import { addDays, timeText } from "../utils/pickupSlots.js";
 import { dateText, today } from "../utils/formatters.js";
@@ -16,13 +19,24 @@ import { AsyncForm } from "../../../components/ui/AsyncForm.jsx";
 import { Field } from "../../../components/ui/Field.jsx";
 import { AddSlots } from "../components/AddSlots.jsx";
 
+// Monday of the week containing a YYYY-MM-DD date.
+const weekStart = (date) => {
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
+  return addDays(date, weekday === 0 ? -6 : 1 - weekday);
+};
+
 export function PickupSlots({ notify }) {
-  const [slots, setSlots] = usePersistedState("panther-pickup-slots-v1", initialSlots);
-  const [week, setWeek] = useState("2026-10-12");
+  const refresh = useRefresh();
+  const [week, setWeek] = useSessionState("panther-slot-week", () => weekStart(today()));
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
   const days = useMemo(() => Array.from({ length: 5 }, (_, i) => addDays(week, i)), [week]);
   const end = days[4];
+  const slotsQuery = useQuery({
+    queryKey: keys.slots(week, end),
+    queryFn: () => fetchSlots(week, end),
+  });
+  const slots = slotsQuery.data || [];
   const range =
     new Date(`${week}T12:00:00`).getMonth() === new Date(`${end}T12:00:00`).getMonth()
       ? `${dateText(week, false)} – ${Number(end.slice(8))}, ${end.slice(0, 4)}`
@@ -58,12 +72,10 @@ export function PickupSlots({ notify }) {
           </>
         }
       />
-      <DataLoader queryKey={week} initialLoading={false} label="Loading pickup slots…">
+      <DataLoader queries={slotsQuery} label="Loading pickup slots…">
         <div className="stock-slot-board">
           {days.map((date) => {
-            const daySlots = slots
-              .filter((s) => s.date === date)
-              .sort((a, b) => a.time.localeCompare(b.time));
+            const daySlots = slots.filter((s) => s.date === date);
             const past = date < today();
             const isToday = date === today();
             return (
@@ -128,10 +140,10 @@ export function PickupSlots({ notify }) {
           <AsyncForm
             id="stock-slot-form"
             className="stack"
-            onSubmit={(e, formData) => {
+            onSubmit={async (e, formData) => {
               e.preventDefault();
-              const capacity = Number(formData.get("capacity"));
-              setSlots((old) => old.map((s) => (s.id === editing.id ? { ...s, capacity } : s)));
+              await updateSlotCapacity(editing.id, Number(formData.get("capacity")));
+              await refresh(affected.slots);
               setEditing(null);
               notify("Pickup slot capacity updated.");
             }}
@@ -158,12 +170,13 @@ export function PickupSlots({ notify }) {
       {adding && (
         <AddSlots
           week={week}
-          slots={slots}
           onClose={() => setAdding(false)}
-          onSave={(newSlots) => {
-            setSlots((old) => [...old, ...newSlots]);
+          onSave={async (spec) => {
+            const count = await createSlots(spec);
+            await refresh(affected.slots);
             setAdding(false);
-            notify(`${newSlots.length} pickup ${newSlots.length === 1 ? "slot" : "slots"} added.`);
+            setWeek(weekStart(spec.date));
+            notify(`${count} pickup ${count === 1 ? "slot" : "slots"} added.`);
           }}
         />
       )}

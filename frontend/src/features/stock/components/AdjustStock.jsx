@@ -6,9 +6,10 @@ import { quantityOf } from "../utils/inventory.js";
 import { Field } from "../../../components/ui/Field.jsx";
 import { dateText } from "../utils/formatters.js";
 
-export function AdjustStock({ item, initialLot, onClose, onSave }) {
+// Set a lot to the counted quantity; the server records the difference with the reason.
+export function AdjustStock({ item, lots, initialLot, onClose, onSave }) {
   const [lotId, setLotId] = useState(initialLot);
-  const lot = item.lots.find((l) => l.id === lotId) || item.lots[0];
+  const lot = lots.find((l) => l.id === lotId) || lots[0];
   const [quantity, setQuantity] = useState(lot.quantity);
   return (
     <Modal
@@ -30,11 +31,11 @@ export function AdjustStock({ item, initialLot, onClose, onSave }) {
         className="stack"
         onSubmit={(e, formData) => {
           e.preventDefault();
-          onSave(lot.id, Number(quantity), formData.get("reason").trim());
+          return onSave(lot.id, Number(quantity), formData.get("reason").trim());
         }}
       >
         <p className="muted">
-          {item.name} · currently {quantityOf(item)} {item.unit} on hand
+          {item.name} · currently {quantityOf(item)} {item.unit} available
         </p>
         <Field label="Lot">
           <select
@@ -42,12 +43,12 @@ export function AdjustStock({ item, initialLot, onClose, onSave }) {
             value={lot.id}
             onChange={(e) => {
               setLotId(e.target.value);
-              setQuantity(item.lots.find((l) => l.id === e.target.value).quantity);
+              setQuantity(lots.find((l) => l.id === e.target.value).quantity);
             }}
           >
-            {item.lots.map((l) => (
+            {lots.map((l) => (
               <option key={l.id} value={l.id}>
-                {dateText(l.expiry)} · {l.shelf} · {l.quantity} {item.unit}
+                {l.expiry ? dateText(l.expiry) : "No expiry"} · {l.shelf} · {l.quantity} {item.unit}
               </option>
             ))}
           </select>
@@ -60,6 +61,7 @@ export function AdjustStock({ item, initialLot, onClose, onSave }) {
             className="input"
             type="number"
             min="0"
+            step="1"
             required
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
@@ -71,6 +73,7 @@ export function AdjustStock({ item, initialLot, onClose, onSave }) {
             name="reason"
             placeholder="e.g. damaged package or stock count correction"
             required
+            maxLength={500}
           />
         </Field>
       </AsyncForm>

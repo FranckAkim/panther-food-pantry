@@ -1,6 +1,7 @@
-import { usePersistedState } from "../../../hooks/usePersistedState.js";
-import { auditKey, initialAuditLog } from "./data.js";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAuditEntries } from "../../../api/operations.js";
+import { keys } from "../../../api/keys.js";
 import { localDate } from "../../../lib/dates.js";
 import { PageHeading } from "../../../components/ui/PageHeading.jsx";
 import { Search } from "../components/Search.jsx";
@@ -10,14 +11,17 @@ import { EmptyState } from "../../../components/ui/EmptyState.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 
 export function AuditLog() {
-  const [entries] = usePersistedState(auditKey, initialAuditLog);
+  const auditQuery = useQuery({ queryKey: keys.audit, queryFn: fetchAuditEntries });
+  const entries = useMemo(() => auditQuery.data || [], [auditQuery.data]);
   const sorted = useMemo(
     () => [...entries].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)),
     [entries],
   );
   const [query, setQuery] = useState("");
   const [action, setAction] = useState("");
-  const [date, setDate] = useState(() => (sorted.length ? localDate(sorted[0].timestamp) : ""));
+  // null = the newest day with activity; "" = all dates.
+  const [chosenDate, setDate] = useState(null);
+  const date = chosenDate ?? (sorted.length ? localDate(sorted[0].timestamp) : "");
   const [page, setPage] = useState(0);
   const actions = [...new Set(entries.map((entry) => entry.action))].sort();
   const dates = [...new Set(entries.map((entry) => localDate(entry.timestamp)))].sort().reverse();
@@ -76,11 +80,7 @@ export function AuditLog() {
           ))}
         </select>
       </div>
-      <DataLoader
-        queryKey={JSON.stringify([query, action, date, pageIndex])}
-        initialLoading={false}
-        label="Loading audit log…"
-      >
+      <DataLoader queries={auditQuery} label="Loading audit log…">
         <div className="table-wrap">
           <table className="data-table admin-audit-table">
             <thead>

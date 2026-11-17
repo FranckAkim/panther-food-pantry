@@ -7,6 +7,7 @@ import { Asset } from "../components/Asset.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { Status } from "../components/Status.jsx";
 import { EmptyState } from "../../../components/ui/EmptyState.jsx";
+import { AccountAvatar } from "../../../components/AccountAvatar.jsx";
 
 export function RequestsPage({
   search,
@@ -20,6 +21,7 @@ export function RequestsPage({
   navigate,
   approve,
   openDecline,
+  requestsQuery,
 }) {
   return (
     <>
@@ -50,11 +52,7 @@ export function RequestsPage({
           </button>
         ))}
       </div>
-      <DataLoader
-        queryKey={JSON.stringify([search, filter])}
-        initialLoading={false}
-        label="Loading requests…"
-      >
+      <DataLoader queries={requestsQuery} label="Loading requests…">
         <Card className="sr-requests-card">
           <div className="table-wrap">
             <table className="data-table sr-requests-table">
@@ -72,16 +70,21 @@ export function RequestsPage({
                 {filteredRequests.map((request) => (
                   <tr key={request.id}>
                     <td>
-                      <button
-                        className="sr-person-link sr-person-strong"
-                        onClick={() => {
-                          setSelectedRequest(request.id);
-                          navigate("/staff/request-detail");
-                        }}
-                      >
-                        {request.name}
-                      </button>
-                      <div className="muted">{request.studentId}</div>
+                      <div className="person-cell">
+                        <AccountAvatar profileId={request.profileId} name={request.name} />
+                        <div>
+                          <button
+                            className="sr-person-link sr-person-strong"
+                            onClick={() => {
+                              setSelectedRequest(request.id);
+                              navigate("/staff/request-detail");
+                            }}
+                          >
+                            {request.name}
+                          </button>
+                          <div className="muted">{request.studentId}</div>
+                        </div>
+                      </div>
                     </td>
                     <td>{request.pickup}</td>
                     <td className="muted">{request.sent}</td>

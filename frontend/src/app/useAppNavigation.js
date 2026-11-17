@@ -1,25 +1,31 @@
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRoute, adminLinks, staffLinks, pageTitles } from "./routes.js";
-import { usePersistedState } from "../hooks/usePersistedState.js";
-import { initialRequests } from "../features/operations/data.js";
-import { adminUsersKey, initialAdminUsers } from "../features/admin/users/data.js";
-import { notifySuccess } from "../components/Notifications.jsx";
-import { matchesEmail } from "../features/admin/users/model.js";
+import { notifyError, notifySuccess } from "../components/Notifications.jsx";
+import { useSession } from "../features/auth/useSession.js";
+import { signOut as endSession } from "../api/auth.js";
+import { fetchStaffRequests } from "../api/requests.js";
+import { keys } from "../api/keys.js";
+
+const portals = ["student", "staff", "admin"];
+export const homeFor = (role) => (role === "student" ? "/student/home" : `/${role}/dashboard`);
+export const signInFor = (portal) => (portal === "student" ? "/sign-in" : `/${portal}/sign-in`);
 
 export function useAppNavigation() {
   const [route, setRoute] = useState(getRoute);
-  const [profile, setProfile] = usePersistedState("panther-demo-profile", null);
-  const [requests] = usePersistedState("panther-staff-requests", initialRequests);
-  const [adminUsers] = usePersistedState(adminUsersKey, initialAdminUsers);
+  const queryClient = useQueryClient();
+  const session = useSession();
+  const profile = session.account;
+  const ready = session.status === "ready";
   const [mobileMenu, setMobileMenu] = useState(false);
   const parts = route.split("?")[0].split("/").filter(Boolean);
   const area = parts[0];
-  const portal = ["student", "staff", "admin"].includes(area) ? area : "student";
-  const page = ["student", "staff", "admin"].includes(area)
+  const portal = portals.includes(area) ? area : "student";
+  const page = portals.includes(area)
     ? parts[1] || (portal === "student" ? "home" : "dashboard")
     : area || "sign-in";
   const authPage = page === "sign-in" || page === "register";
-  const authenticated = profile?.role === portal;
+  const authenticated = Boolean(profile) && profile.role === portal;
   const navigationLinks = portal === "admin" ? adminLinks : staffLinks;
   const activeNav =
     {
@@ -31,7 +37,14 @@ export function useAppNavigation() {
       "pickup-slots": "slots",
     }[page] || page;
   const roleName = portal === "admin" ? "Admin" : "Staff";
-  const waitingCount = requests.filter((request) => request.status === "Waiting").length;
+  const workspace = authenticated && portal !== "student";
+  const requests = useQuery({
+    queryKey: keys.requests,
+    queryFn: fetchStaffRequests,
+    enabled: workspace,
+    refetchInterval: 60_000,
+  });
+  const waitingCount = (requests.data || []).filter((r) => r.dbStatus === "submitted").length;
   const notify = notifySuccess;
   function navigate(destination) {
     window.location.hash = destination;
@@ -40,41 +53,53 @@ export function useAppNavigation() {
   function workspaceNavigate(destination) {
     navigate(portal === "admin" ? destination.replace(/^\/staff\//, "/admin/") : destination);
   }
-  function signOut() {
-    setProfile(null);
-    navigate(portal === "student" ? "/sign-in" : `/${portal}/sign-in`);
+  async function signOut() {
+    try {
+      await endSession();
+    } catch (error) {
+      notifyError(error.message);
+      return;
+    }
+    navigate(signInFor(portal));
     notify("You have signed out.");
   }
   useEffect(() => {
-    const update = () => setRoute(getRoute());
-    window.addEventListener("hashchange", update);
-    return () => {
-      window.removeEventListener("hashchange", update);
+    const update = () => {
+      setRoute(getRoute());
+      // Pages share mounted queries, so refresh what is on screen after each navigation.
+      queryClient.invalidateQueries({ refetchType: "active" });
     };
-  }, []);
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, [queryClient]);
   useEffect(() => {
     document.title = `${authPage && portal !== "student" ? `${roleName} sign in` : pageTitles[page] || "Page not found"} · Panther Pantry`;
     window.scrollTo({ top: 0 });
     setMobileMenu(false);
   }, [route, page, portal, authPage, roleName]);
+  // The redirects below run after render. If the address has changed since (a newer navigation
+  // is pending), they must not act on the old page and undo it.
+  const current = () => getRoute() === route;
+  // Signed-out visitors go to the sign-in page for the portal they asked for.
   useEffect(() => {
-    if (!authPage && !authenticated && ["student", "staff", "admin"].includes(area))
-      window.location.hash = portal === "student" ? "/sign-in" : `/${portal}/sign-in`;
-  }, [area, authPage, authenticated, portal]);
+    if (ready && !authPage && !authenticated && portals.includes(area) && current())
+      window.location.hash = signInFor(portal);
+  }, [ready, area, authPage, authenticated, portal, route]);
+  // Someone already signed in to this portal skips its sign-in page (e.g. after an email link).
   useEffect(() => {
-    if (!profile) return;
-    const managed = adminUsers.find((user) => matchesEmail(user, profile.email));
-    if (managed && (!managed.active || managed.role !== profile.role)) {
-      setProfile(null);
-      navigate(`/${managed.role}/sign-in`);
-      notify("Your account access changed. Please sign in again.");
-    }
-  }, [adminUsers, profile, setProfile]);
+    if (!ready || !profile || session.recovery || !authPage || !current()) return;
+    if (profile.role === (page === "register" ? "student" : portal))
+      window.location.hash = homeFor(profile.role);
+  }, [ready, profile, session.recovery, authPage, page, portal, route]);
   useEffect(() => {
     if (portal === "admin" && page === "students") navigate("/admin/users");
   }, [portal, page]);
 
   return {
+    ready,
+    recovery: session.recovery,
+    finishRecovery: session.finishRecovery,
+    signedIn: session.signedIn,
     workspaceNavigate,
     notify,
     navigate,
@@ -83,7 +108,6 @@ export function useAppNavigation() {
     authenticated,
     portal,
     page,
-    setProfile,
     area,
     signOut,
     mobileMenu,

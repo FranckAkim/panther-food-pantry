@@ -1,165 +1,176 @@
-// Keep workflow state here so page navigation preserves filters and selections.
+// Workflow state for the dashboard, requests, pickups, and handing out food.
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { usePendingAction } from "../../../components/loading/ActionContext.js";
-import { usePersistedState } from "../../../hooks/usePersistedState.js";
-import { initialRequests, initialPickups, waitingRequests, foodCatalog } from "../data.js";
-import { initialItems } from "../../stock/data/inventory.js";
-import { initialSlots } from "../../stock/data/pickupSlots.js";
-import { useState, useMemo, useEffect } from "react";
-import { readActivePickup, readSaved } from "../storage.js";
-import { pickupDate, pickupSlot } from "../utils/pickupDates.js";
 import { notifyError } from "../../../components/Notifications.jsx";
-import { distributeInventory } from "../utils/distributeInventory.js";
+import { affected, keys } from "../../../api/keys.js";
+import {
+  completeDistribution,
+  decideRequest,
+  fetchPickups,
+  fetchStaffRequests,
+  markNoShow,
+} from "../../../api/requests.js";
+import { fetchInventory } from "../../../api/inventory.js";
+import { addDays, pantryToday, shortDate } from "../../../api/time.js";
+import { useRefresh } from "../../../lib/queryClient.js";
+import { readSession, useSessionState, writeSession } from "../../../hooks/useSessionState.js";
+
+export const ACTIVE_PICKUP_KEY = "panther-active-pickup";
+
+const daysBetween = (from, to) =>
+  Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86400000);
 
 export function useOperations({ page, navigate, notify }) {
   const { pending } = usePendingAction();
-  const [requests, setRequests] = usePersistedState("panther-staff-requests", initialRequests);
-  const [pickups, setPickups] = usePersistedState("panther-staff-pickups", initialPickups);
-  const [inventory, setInventory] = usePersistedState("panther-inventory-v1", initialItems);
-  const [, setSlots] = usePersistedState("panther-pickup-slots-v1", initialSlots);
+  const refresh = useRefresh();
+  const today = pantryToday();
+  const [dayOffset, setDayOffset] = useSessionState("panther-pickup-day", 0);
+  const pickupDate = page === "dashboard" ? today : addDays(today, dayOffset);
+  const requestsQuery = useQuery({
+    queryKey: keys.requests,
+    queryFn: fetchStaffRequests,
+    enabled: ["dashboard", "requests", "request-detail"].includes(page),
+  });
+  const pickupsQuery = useQuery({
+    queryKey: keys.pickups(pickupDate),
+    queryFn: () => fetchPickups(pickupDate),
+    enabled: ["dashboard", "pickups"].includes(page),
+  });
+  const inventoryQuery = useQuery({
+    queryKey: keys.inventory,
+    queryFn: fetchInventory,
+    enabled: ["dashboard", "distribution"].includes(page),
+  });
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Waiting");
   const [declining, setDeclining] = useState(null);
   const [reason, setReason] = useState("");
-  const [selectedRequest, setSelectedRequest] = usePersistedState(
-    "panther-selected-request",
-    waitingRequests[0].id,
-  );
-  const [selectedPickup, setSelectedPickup] = useState(readActivePickup);
+  const [selectedRequest, setSelectedRequest] = useSessionState("panther-selected-request", null);
+  const [selectedPickup, setSelectedPickup] = useState(() => readSession(ACTIVE_PICKUP_KEY, null));
   const [items, setItems] = useState([]);
   const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [idChecked, setIdChecked] = useState(true);
-  const [dayOffset, setDayOffset] = usePersistedState("panther-pickup-day", 0);
+  const [idChecked, setIdChecked] = useState(false);
   const [noShowPickup, setNoShowPickup] = useState(null);
-  const waitingCount = requests.filter((r) => r.status === "Waiting").length;
-  const approvedCount = requests.filter((r) => r.status === "Approved").length;
-  const selectedDate = new Date(Date.UTC(2026, 9, 14 + dayOffset, 12)).toISOString().slice(0, 10);
-  const dayPickups = pickups.filter((pickup) => pickupDate(pickup) === selectedDate);
-  const dashboardPickups = pickups.filter((pickup) => pickupDate(pickup) === "2026-10-14");
-  const doneCount = dayPickups.filter((p) => p.status === "Completed").length;
-  const pendingCount = dayPickups.filter((p) => p.status === "Approved").length;
+
+  const requests = requestsQuery.data || [];
+  const waitingCount = requests.filter((r) => r.dbStatus === "submitted").length;
+  const approvedCount = requests.filter((r) => r.dbStatus === "approved").length;
+  const dayPickups = pickupsQuery.data || [];
+  const dashboardPickups = page === "dashboard" ? dayPickups : [];
+  const doneCount = dayPickups.filter((p) => p.dbStatus === "completed").length;
+  const pendingCount = dayPickups.filter((p) => p.dbStatus === "approved").length;
+  const inventory = inventoryQuery.data || [];
   const availableCatalog = useMemo(
     () =>
-      inventory.map((item) => {
-        const firstLot = [...item.lots]
-          .filter((lot) => Number(lot.quantity) > 0)
-          .sort((a, b) => (a.expiry || "9999").localeCompare(b.expiry || "9999"))[0];
-        const known = foodCatalog.find((candidate) => candidate.id === item.id);
-        return {
+      inventory
+        .filter((item) => item.available > 0)
+        .map((item) => ({
           id: item.id,
           name: item.name,
-          unit: known?.unit || item.unit.replace(/s$/, ""),
+          imagePath: item.imagePath,
+          unit: item.unitName,
           plural: item.unit,
-          qty: known?.qty || 1,
-          onHand: item.lots.reduce((sum, lot) => sum + Number(lot.quantity), 0),
-          expires: firstLot?.expiry
-            ? new Date(`${firstLot.expiry}T12:00:00`).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
-            : "—",
-          shelf: firstLot?.shelf === "Cooler" ? "Cooler" : `Shelf ${firstLot?.shelf || "—"}`,
-          expiring: firstLot?.expiry && firstLot.expiry <= "2026-10-21",
-        };
-      }),
+          onHand: item.available,
+          lotLabel: `${item.nextLot?.expiry ? `Expires ${shortDate(item.nextLot.expiry)}` : "No expiry date"} · ${item.nextLot?.shelf || "—"}`,
+          expiring: Boolean(item.nextLot?.expiringSoon),
+        })),
     [inventory],
   );
+  // The food the student chose when requesting (none for walk-ins). Pickups saved in this tab
+  // before the server returned item ids are matched by name.
+  const requestedItemId = selectedPickup?.requestId
+    ? selectedPickup.itemId ||
+      inventory.find((item) => item.name === selectedPickup.foodName)?.id ||
+      null
+    : null;
+  const requestedFood =
+    selectedPickup?.requestId && selectedPickup.foodName
+      ? {
+          name: selectedPickup.foodName,
+          available: availableCatalog.some((item) => item.id === requestedItemId),
+        }
+      : null;
   const displayedItems = items.map((item) => ({
     ...item,
     ...availableCatalog.find((candidate) => candidate.id === item.id),
     qty: item.qty,
+    requested: item.id === requestedItemId,
   }));
-  const lowStockItems = inventory.filter(
-    (item) => item.lots.reduce((sum, lot) => sum + Number(lot.quantity), 0) < item.alert,
-  );
+  const units = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  const lowStockItems = inventory.filter((item) => item.available < item.alert);
   const expiringLots = inventory.flatMap((item) =>
     item.lots
-      .filter((lot) => Number(lot.quantity) > 0 && lot.expiry && lot.expiry <= "2026-10-21")
+      .filter((lot) => lot.expiringSoon)
       .map((lot) => ({ ...lot, itemName: item.name, unit: item.unit })),
   );
-  const activeRequest = requests.find((r) => r.id === selectedRequest) || requests[0];
+  const activeRequest = requests.find((r) => r.id === selectedRequest) || null;
   const filteredRequests = useMemo(
     () =>
       requests.filter(
         (r) =>
           (filter === "All" || r.status === filter) &&
-          `${r.name} ${r.studentId}`.toLowerCase().includes(search.toLowerCase()),
+          `${r.name} ${r.studentId}`.toLowerCase().includes(search.trim().toLowerCase()),
       ),
     [requests, filter, search],
   );
 
+  const prefilledFor = useRef(null);
   useEffect(() => {
     if (page === "distribution") {
-      const active = readActivePickup();
+      const active = readSession(ACTIVE_PICKUP_KEY, null);
       setSelectedPickup(active);
-      setIdChecked(!active.firstVisit || active.idChecked === true || active.id === "marcus");
+      setIdChecked(active?.idChecked === true);
       setItems([]);
       setItemId("");
       setQuantity(1);
+      prefilledFor.current = null;
     }
   }, [page]);
+  // Start the list with the requested food (quantity 1) once stock has loaded, if it is still
+  // available. Staff can change the quantity, remove it, or add other items.
+  useEffect(() => {
+    if (page !== "distribution" || !inventoryQuery.isSuccess || !selectedPickup?.requestId) return;
+    if (prefilledFor.current === selectedPickup.requestId) return;
+    prefilledFor.current = selectedPickup.requestId;
+    if (availableCatalog.some((item) => item.id === requestedItemId))
+      setItems([{ id: requestedItemId, qty: 1 }]);
+  }, [page, inventoryQuery.isSuccess, selectedPickup, availableCatalog, requestedItemId]);
 
-  const approve = (request) => {
-    setRequests((current) =>
-      current.map((r) => (r.id === request.id ? { ...r, status: "Approved" } : r)),
-    );
-    const pickup = {
-      ...request,
-      status: "Approved",
-      date: pickupDate(request),
-      slot: pickupSlot(request),
-      time:
-        request.time ||
-        request.pickup?.split(" · ")[1] ||
-        request.slot?.split(" – ")[0] ||
-        "1:00 PM",
-    };
-    setPickups((current) =>
-      current.some((p) => p.id === request.id)
-        ? current.map((p) => (p.id === request.id ? pickup : p))
-        : [...current, pickup],
-    );
+  const approve = async (request) => {
+    await decideRequest(request.id, true);
+    await refresh(affected.request);
     notify(`${request.name}'s request approved.`);
   };
   const openDecline = (request) => {
     setDeclining(request);
     setReason("");
   };
-  const decline = () => {
+  const decline = async () => {
     if (!reason.trim()) {
       notifyError("Enter a reason so the student knows why the request was declined.");
       return;
     }
-    setRequests((current) =>
-      current.map((r) =>
-        r.id === declining.id
-          ? {
-              ...r,
-              status: "Declined",
-              slotReserved: false,
-              declineReason: reason.trim(),
-            }
-          : r,
-      ),
-    );
-    if (declining.slotReserved && declining.slotId)
-      setSlots((current) =>
-        current.map((slot) =>
-          slot.id === declining.slotId ? { ...slot, booked: Math.max(0, slot.booked - 1) } : slot,
-        ),
-      );
+    await decideRequest(declining.id, false, reason.trim());
+    await refresh(affected.request);
     notify(`${declining.name}'s request declined.`);
     setDeclining(null);
   };
+  const confirmNoShow = async () => {
+    await markNoShow(noShowPickup.requestId);
+    await refresh(affected.request);
+    notify(`${noShowPickup.name} marked as a no-show.`);
+    setNoShowPickup(null);
+  };
   const openDistribution = (pickup) => {
-    localStorage.setItem("panther-active-pickup", JSON.stringify(pickup));
+    writeSession(ACTIVE_PICKUP_KEY, pickup);
     setSelectedPickup(pickup);
     navigate("/staff/distribution");
   };
   const addItem = (event) => {
     event.preventDefault();
-    const match = availableCatalog.find((item) => item.id === itemId && item.onHand > 0);
+    const match = availableCatalog.find((item) => item.id === itemId);
     const count = Number(quantity);
     if (!match) {
       notifyError("Choose an available item from the dropdown.");
@@ -170,30 +181,28 @@ export function useOperations({ page, navigate, notify }) {
       return;
     }
     const existing = items.find((item) => item.id === match.id);
-    if (count + (existing?.qty || 0) > match.onHand) {
+    const already = Number(existing?.qty) || 0;
+    if (count + already > match.onHand) {
       notifyError(
         `Only ${match.onHand} ${match.plural} of ${match.name.toLowerCase()} are available.`,
       );
       return;
     }
     setItems((current) => [
-      {
-        ...match,
-        qty: (current.find((item) => item.id === match.id)?.qty || 0) + count,
-      },
+      { id: match.id, qty: already + count },
       ...current.filter((item) => item.id !== match.id),
     ]);
     setItemId("");
     setQuantity(1);
   };
-  const completePickup = () => {
-    const currentRequest = readSaved("panther-staff-requests", requests).find(
-      (request) => request.id === selectedPickup.id,
+  /** Quantity typed in a line of the list; kept as typed ("" while editing), checked on complete. */
+  const setItemQty = (id, value) =>
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, qty: value === "" ? "" : Number(value) } : item,
+      ),
     );
-    if (currentRequest && ["Cancelled", "Declined"].includes(currentRequest.status)) {
-      notifyError("This request is no longer active. Return to the pickup list.");
-      return;
-    }
+  const completePickup = async () => {
     if (selectedPickup.firstVisit && !idChecked) {
       notifyError("Check the student ID card before completing this first pickup.");
       return;
@@ -202,77 +211,46 @@ export function useOperations({ page, navigate, notify }) {
       notifyError("Add at least one item before completing the pickup.");
       return;
     }
-    if (
-      readSaved("panther-staff-pickups", pickups).some(
-        (p) => p.id === selectedPickup.id && p.status === "Completed",
-      )
-    ) {
-      notifyError("This pickup has already been completed.");
-      return;
+    for (const item of displayedItems) {
+      if (!Number.isInteger(item.qty) || item.qty < 1) {
+        notifyError(`Enter a whole-number quantity of at least 1 for ${item.name}.`);
+        return;
+      }
+      if (item.qty > item.onHand) {
+        notifyError(
+          `Only ${item.onHand} ${item.plural} of ${item.name.toLowerCase()} are available.`,
+        );
+        return;
+      }
     }
-    let updatedInventory;
+    const walkIn = !selectedPickup.requestId;
     try {
-      updatedInventory = distributeInventory(
-        readSaved("panther-inventory-v1", inventory),
-        displayedItems,
-        selectedPickup.id,
-        new Date().toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          timeZone: "America/Chicago",
-        }),
-      );
+      await completeDistribution({
+        requestId: selectedPickup.requestId || null,
+        profileId: walkIn && selectedPickup.kind === "account" ? selectedPickup.recipientId : null,
+        provisionalStudentId:
+          walkIn && selectedPickup.kind === "provisional" ? selectedPickup.recipientId : null,
+        items: displayedItems,
+        idChecked,
+      });
     } catch (error) {
-      notifyError(error.message);
-      return;
+      // Stock or the request may have changed since this page loaded.
+      await refresh([keys.inventory, ["pickups"]]);
+      throw error;
     }
-    const completed = {
-      ...selectedPickup,
-      date: pickupDate(selectedPickup),
-      status: "Completed",
-      pickedUp: new Date().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        timeZone: "America/Chicago",
-      }),
-      items: displayedItems,
-      idChecked,
-    };
-    setInventory(updatedInventory);
-    setPickups((current) =>
-      current.some((p) => p.id === completed.id)
-        ? current.map((p) => (p.id === completed.id ? completed : p))
-        : [...current, completed],
-    );
-    setRequests((current) =>
-      current.some((r) => r.id === completed.id)
-        ? current.map((r) =>
-            r.id === completed.id ? { ...r, status: "Completed", items: displayedItems } : r,
-          )
-        : [
-            ...current,
-            {
-              ...completed,
-              pickup: completed.slot || completed.time,
-              sent: "Walk-in",
-            },
-          ],
-    );
-    localStorage.setItem("panther-active-pickup", JSON.stringify(completed));
-    setDayOffset(
-      Math.round(
-        (new Date(`${completed.date}T12:00:00Z`) - new Date("2026-10-14T12:00:00Z")) / 86400000,
-      ),
-    );
+    await refresh(affected.distribution);
+    writeSession(ACTIVE_PICKUP_KEY, null);
+    setDayOffset(selectedPickup.date ? daysBetween(today, selectedPickup.date) : 0);
     notify(
-      `Pickup completed for ${selectedPickup.name}. ${items.reduce((sum, item) => sum + item.qty, 0)} units handed out.`,
+      `Pickup completed for ${selectedPickup.name}. ${units} ${units === 1 ? "unit" : "units"} handed out.`,
     );
     navigate("/staff/pickups");
   };
 
   return {
+    queries: { requests: requestsQuery, pickups: pickupsQuery, inventory: inventoryQuery },
+    today,
+    pickupDate,
     waitingCount,
     dashboardPickups,
     lowStockItems,
@@ -306,7 +284,10 @@ export function useOperations({ page, navigate, notify }) {
     setQuantity,
     displayedItems,
     setItems,
+    setItemQty,
     items,
+    units,
+    requestedFood,
     completePickup,
     declining,
     setDeclining,
@@ -314,7 +295,6 @@ export function useOperations({ page, navigate, notify }) {
     reason,
     setReason,
     noShowPickup,
-    setPickups,
-    setRequests,
+    confirmNoShow,
   };
 }

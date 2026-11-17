@@ -20,3 +20,7 @@ frontend/test-results/
 .idea/
 .DS_Store
 Thumbs.db
+frontend/playwright-report/
+frontend/test-results/
+supabase/.branches/
+supabase/.temp/

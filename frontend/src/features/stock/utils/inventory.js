@@ -1,20 +1,16 @@
-export const quantityOf = (item) => item.lots.reduce((sum, lot) => sum + Number(lot.quantity), 0);
+// Inventory figures for items shaped by api/mappers.js (mapInventoryItem).
 
-export const nextExpiry = (item) =>
-  item.lots
-    .filter((l) => l.quantity > 0 && l.expiry)
-    .map((l) => l.expiry)
-    .sort()[0];
+/** Units that can be handed out: received, unexpired lots with stock. */
+export const quantityOf = (item) => item.available;
 
-export const lowStock = (item) => quantityOf(item) < item.alert;
+export const expiredQuantity = (item) =>
+  item.lots.filter((lot) => lot.expired).reduce((sum, lot) => sum + Number(lot.quantity), 0);
 
-export const expiresSoon = (item) =>
-  item.lots.some((l) => l.quantity > 0 && l.expiry && l.expiry <= "2026-10-21");
+export const nextExpiry = (item) => item.nextLot?.expiry;
+
+export const lowStock = (item) => item.available < item.alert;
+
+export const expiresSoon = (item) => item.lots.some((lot) => lot.expiringSoon);
 
 export const expiringLotCount = (items) =>
-  items.reduce(
-    (count, item) =>
-      count +
-      item.lots.filter((l) => l.quantity > 0 && l.expiry && l.expiry <= "2026-10-21").length,
-    0,
-  );
+  items.reduce((count, item) => count + item.lots.filter((lot) => lot.expiringSoon).length, 0);

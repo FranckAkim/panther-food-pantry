@@ -6,6 +6,8 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { Asset } from "../components/Asset.jsx";
 import { EmptyState } from "../../../components/ui/EmptyState.jsx";
+import { ItemPhoto } from "../../../components/ui/ItemPhoto.jsx";
+import { StudentPhotoCheck } from "../../../components/AccountAvatar.jsx";
 
 export function DistributionPage({
   textLink,
@@ -21,7 +23,10 @@ export function DistributionPage({
   setQuantity,
   displayedItems,
   setItems,
+  setItemQty,
   items,
+  units,
+  requestedFood,
   navigate,
   completePickup,
 }) {
@@ -38,6 +43,7 @@ export function DistributionPage({
         />
       </div>
       <Card className="sr-student-summary">
+        <StudentPhotoCheck profileId={selectedPickup.recipientId} name={selectedPickup.name} />
         <dl>
           <div>
             <dt>Name</dt>
@@ -50,9 +56,19 @@ export function DistributionPage({
           <div>
             <dt>Request</dt>
             <dd>
-              <Status status={selectedPickup.status || "Approved"} />
+              {selectedPickup.requestId ? (
+                <Status status={selectedPickup.status || "Approved"} />
+              ) : (
+                "Walk-in"
+              )}
             </dd>
           </div>
+          {requestedFood && (
+            <div>
+              <dt>Requested food</dt>
+              <dd>{requestedFood.name}</dd>
+            </div>
+          )}
           <div>
             <dt>Note</dt>
             <dd>{selectedPickup.note || "—"}</dd>
@@ -75,8 +91,17 @@ export function DistributionPage({
         <div className="sr-distribution-top">
           <h2>Items</h2>
           <p className="muted">
+            {requestedFood
+              ? "The food the student requested is listed first. Change its quantity, remove it, or add other items. "
+              : ""}
             Oldest food goes out first. The system picks the lots that expire soonest.
           </p>
+          {requestedFood && !requestedFood.available && (
+            <p className="sr-requested-unavailable" role="status">
+              {requestedFood.name} (requested) is out of stock right now. Choose something else for
+              this pickup.
+            </p>
+          )}
           <form className="sr-add-item" onSubmit={addItem}>
             <Field label="Add an item">
               <select
@@ -129,15 +154,32 @@ export function DistributionPage({
             <tbody>
               {displayedItems.map((item) => (
                 <tr key={item.id}>
-                  <td>{item.name}</td>
                   <td>
-                    {item.qty} {item.qty === 1 ? item.unit : item.plural}
+                    <span className="sr-item-cell">
+                      <ItemPhoto path={item.imagePath} />
+                      {item.name}
+                      {item.requested && <Badge tone="purple">Requested</Badge>}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="sr-qty-cell">
+                      <input
+                        className="input sr-qty-input"
+                        type="number"
+                        min="1"
+                        max={item.onHand}
+                        step="1"
+                        aria-label={`Quantity of ${item.name}`}
+                        disabled={!!pending}
+                        value={item.qty}
+                        onChange={(e) => setItemQty(item.id, e.target.value)}
+                      />
+                      {item.qty === 1 ? item.unit : item.plural}
+                    </span>
                   </td>
                   <td>
                     <div className="sr-lot">
-                      <span className="muted">
-                        Expires {item.expires} · {item.shelf}
-                      </span>
+                      <span className="muted">{item.lotLabel}</span>
                       {item.expiring && <Badge tone="orange">Expires soon</Badge>}
                     </div>
                   </td>
@@ -167,7 +209,8 @@ export function DistributionPage({
         )}
         <div className="sr-distribution-footer">
           <span>
-            {items.length} items · {items.reduce((sum, item) => sum + item.qty, 0)} units
+            {items.length} {items.length === 1 ? "item" : "items"} · {units}{" "}
+            {units === 1 ? "unit" : "units"}
           </span>
           <div>
             <Button variant="secondary" onClick={() => navigate("/staff/pickups")}>

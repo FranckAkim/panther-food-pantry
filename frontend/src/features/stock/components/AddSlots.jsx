@@ -2,11 +2,11 @@ import { Modal } from "../../../components/ui/Modal.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { AsyncForm } from "../../../components/ui/AsyncForm.jsx";
 import { notifyError } from "../../../components/Notifications.jsx";
-import { id, today } from "../utils/formatters.js";
+import { today } from "../utils/formatters.js";
 import { Field } from "../../../components/ui/Field.jsx";
 import { DateInput } from "./DateInput.jsx";
 
-export function AddSlots({ week, slots, onClose, onSave }) {
+export function AddSlots({ week, onClose, onSave }) {
   return (
     <Modal
       title="Add pickup slots"
@@ -35,31 +35,14 @@ export function AddSlots({ week, slots, onClose, onSave }) {
             notifyError("End time must be later than start time.");
             return;
           }
-          const [hour, minute] = start.split(":").map(Number);
-          const [endHour, endMinute] = end.split(":").map(Number);
-          const newSlots = [];
-          for (
-            let at = hour * 60 + minute;
-            at < endHour * 60 + endMinute;
-            at += Number(data.get("interval"))
-          ) {
-            const time = `${String(Math.floor(at / 60)).padStart(2, "0")}:${String(at % 60).padStart(2, "0")}`;
-            if (!slots.some((s) => s.date === date && s.time === time))
-              newSlots.push({
-                id: id(),
-                date,
-                time,
-                capacity: Number(data.get("capacity")),
-                booked: 0,
-              });
-          }
-          if (!newSlots.length) {
-            notifyError(
-              "Slots already exist at all of these times. Choose a different time range.",
-            );
-            return;
-          }
-          onSave(newSlots);
+          // The server skips times that already have a slot.
+          return onSave({
+            date,
+            start,
+            end,
+            interval: Number(data.get("interval")),
+            capacity: Number(data.get("capacity")),
+          });
         }}
       >
         <Field label="Date">
