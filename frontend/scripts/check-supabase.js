@@ -21,6 +21,43 @@ async function checkConnection() {
   // Schema listing requires a server key. Query a known table directly instead,
   // with a zero-row limit so the check never fetches pantry records.
   const table = process.argv[2];
+  if (table === "--contracts") {
+    const client = createClient(url, publishableKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const day = new Date().toISOString().slice(0, 10);
+    const reads = [
+      ["my_food_requests", {}],
+      ["available_inventory", {}],
+      ["category_availability", {}],
+      ["pickup_slot_availability", { p_from: day, p_to: day }],
+      ["staff_list_requests", {}],
+      ["staff_pickups", { p_date: day }],
+      ["staff_list_students", {}],
+      ["admin_list_accounts", {}],
+      ["admin_report_months", {}],
+      ["admin_monthly_report", { p_month: day.slice(0, 7) + "-01" }],
+      ["admin_audit_entries", {}],
+    ];
+    let failed = false;
+    for (const [name, args] of reads) {
+      const { error } = await client.rpc(name, args).abortSignal(AbortSignal.timeout(15000));
+      // A role denial proves resolution without authenticating or reading pantry rows.
+      if (error?.code === "42501") console.log(`${name}: exists; anonymous access denied`);
+      else if (error) {
+        failed = true;
+        console.error(`${name}: ${error.code} — ${error.message}`);
+      } else {
+        failed = true;
+        console.error(`${name}: unexpectedly accepted an anonymous caller; review access policy`);
+      }
+    }
+    if (failed) throw new Error("One or more hosted read contracts need review.");
+    console.log(
+      "Hosted read contracts resolved; no account or pantry data was printed or changed.",
+    );
+    return;
+  }
   if (table) {
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table)) throw new Error("Pass a valid table name.");
     const client = createClient(url, publishableKey, {
