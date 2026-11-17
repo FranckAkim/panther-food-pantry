@@ -1,0 +1,222 @@
+.live-app {
+  max-width: 1240px;
+  margin: auto;
+  padding: 28px;
+  color: #24202b;
+  font-family: Inter, system-ui, sans-serif;
+}
+.live-app h1 {
+  font-size: 30px;
+  margin: 24px 0;
+}
+.live-app h2 {
+  font-size: 20px;
+  margin: 12px 0;
+}
+.live-app button {
+  background: #592a82;
+  color: white;
+  padding: 10px 16px;
+  border: 1px solid #592a82;
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+}
+.live-app button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.live-app .live-secondary {
+  background: white;
+  color: #592a82;
+}
+.live-app button:focus-visible,
+.live-app input:focus-visible,
+.live-app select:focus-visible {
+  outline: 3px solid #cf9c26;
+  outline-offset: 3px;
+}
+.live-header,
+.live-actions,
+.live-tabs {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.live-header {
+  justify-content: space-between;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 20px;
+}
+.live-header strong {
+  font-size: 25px;
+  color: #592a82;
+}
+.live-tabs {
+  padding: 20px 0;
+}
+.live-tabs button {
+  background: white;
+  color: #592a82;
+  border-color: #ddd;
+}
+.live-tabs button[aria-current] {
+  background: #592a82;
+  color: white;
+}
+.live-app section {
+  background: #faf8fc;
+  border: 1px solid #e6dfeb;
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px 0;
+}
+.live-form {
+  margin: 20px 0;
+}
+.live-form > fieldset {
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+}
+.live-form fieldset fieldset {
+  border: 1px solid #ddd;
+  padding: 16px;
+  width: 100%;
+  border-radius: 8px;
+}
+.live-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 170px;
+  flex: 1;
+}
+.live-field input,
+.live-field select {
+  padding: 10px;
+  border: 1px solid #a99caf;
+  border-radius: 5px;
+  background: white;
+  color: #24202b;
+  min-height: 44px;
+  font: inherit;
+  width: 100%;
+}
+.live-check {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+}
+.live-check input {
+  width: 18px;
+  height: 18px;
+}
+.live-table {
+  overflow-x: auto;
+  margin: 20px 0;
+}
+.live-table table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+}
+.live-table th {
+  background: #f0eaf5;
+  padding: 14px;
+  font-weight: 600;
+}
+.live-table td {
+  border-bottom: 1px solid #e6dfeb;
+  padding: 14px;
+  vertical-align: top;
+}
+.live-table td.live-actions {
+  display: table-cell;
+}
+.live-table td button {
+  margin: 3px;
+}
+.live-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin: 14px 0;
+}
+.live-form .stack {
+  width: 100%;
+}
+.live-error,
+.live-notice {
+  padding: 16px;
+  border-radius: 7px;
+  margin: 12px 0;
+}
+.live-error {
+  color: #8c1830;
+  background: #fff0f2;
+  border: 1px solid #e7a1ae;
+}
+.live-notice {
+  color: #175f3b;
+  background: #edf9f2;
+  border: 1px solid #99c9af;
+}
+.live-auth {
+  max-width: 560px;
+  padding-top: 70px;
+}
+.live-auth .live-field {
+  flex-basis: 100%;
+}
+.live-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.live-stats div {
+  padding: 25px;
+  background: #f0eaf5;
+  border-radius: 8px;
+}
+.live-stats dt {
+  text-transform: capitalize;
+}
+.live-stats dd {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0;
+}
+.live-app footer {
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+  margin-top: 40px;
+  font-size: 13px;
+  color: #63576b;
+}
+@media (max-width: 600px) {
+  .live-app {
+    padding: 16px;
+  }
+  .live-app h1 {
+    font-size: 25px;
+  }
+  .live-field {
+    min-width: 100%;
+  }
+  .live-tabs {
+    gap: 7px;
+  }
+  .live-tabs button {
+    padding: 8px;
+  }
+  .live-table table {
+    min-width: 650px;
+  }
+}

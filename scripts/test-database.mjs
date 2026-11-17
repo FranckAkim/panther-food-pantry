@@ -153,6 +153,10 @@ try {
   console.log(
     "PASS concurrent final-unit decrement: one success, one rejection; stock and ledger zero",
   );
+  await checked([...sqlArgs, "-f", "/tmp/supabase/workflows.sql"]);
+  const workflowOutput = await checked([...sqlArgs, "-f", "/tmp/supabase/tests/workflows.sql"]);
+  assert.match(workflowOutput, /workflow tests passed; fixtures rolled back/);
+  console.log("PASS workflow SQL permissions, capacity, rollback, and idempotency");
   const security =
     await sql(`select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;

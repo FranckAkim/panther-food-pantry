@@ -1,5 +1,12 @@
 # System acceptance checklist
 
+November 17 update: a separate default connected workspace now implements the
+operational contracts and passes the isolated real Auth/API/browser journey.
+See [current contracts, test evidence, and hosted blockers](connected-workspace.md).
+The table below records the October baseline; its blocked entries are historical,
+not the current local-test result. Hosted acceptance remains pending owning-account
+access, SQL/function upgrade, real email delivery, and production deployment.
+
 Baseline: October 22, 2026, main `e122c1d` after the Vite security update.
 Test IDs below are QA identifiers, not Jira issue numbers. This checklist covers
 the proposal/UML goals and the [current implementation boundaries](architecture/current-stack.md).

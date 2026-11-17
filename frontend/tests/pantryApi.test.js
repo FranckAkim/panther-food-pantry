@@ -112,15 +112,23 @@ test("disabled users cannot retrieve their profile", async () => {
 test("request submission does not send ownership or status", async () => {
   let payload;
   const api = createPantryApi({
-    from: () => ({
-      insert: (value) => {
-        payload = value;
-        return { select: () => ({ single: async () => ({ data: { id: "request" } }) }) };
-      },
-    }),
+    rpc: async (name, value) => {
+      payload = value;
+      return { data: { id: "request" } };
+    },
   });
-  await api.submitRequest({ categories: [" Produce ", "Produce"], pickupNote: "Afternoon" });
-  assert.deepEqual(payload, { requested_categories: ["Produce"], pickup_note: "Afternoon" });
+  await api.submitRequest({
+    id: "request",
+    slotId: "slot",
+    categories: [" Produce ", "Produce"],
+    pickupNote: "Afternoon",
+  });
+  assert.deepEqual(payload, {
+    p_id: "request",
+    p_slot_id: "slot",
+    p_categories: ["Produce"],
+    p_note: "Afternoon",
+  });
 });
 test("empty categories and oversized notes are rejected", async () => {
   const api = createPantryApi({});

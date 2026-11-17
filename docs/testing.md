@@ -1,5 +1,13 @@
 # DevOps test baseline
 
+## Connected workspace — November 17, 2026
+
+The default frontend is now connected. See [current setup and verification](connected-workspace.md)
+for the local Auth/API/email/function/browser test command, new CI job, SQL workflow
+tests, and hosted deployment requirements. Older sections below are historical
+results and do not describe the current default UI. The original walkthrough's
+browser suite now requires an explicit `VITE_PANTRY_MODE=demo` build.
+
 ## Repeatable database checks and system acceptance
 
 Run `node scripts/test-database.mjs` from the repo root with Node 22 and Docker.

@@ -209,3 +209,12 @@ Terminal action 15 provides this workflow. `updateMyProfile` never sends a stude
 References: https://supabase.com/docs/guides/auth/passwords and
 https://supabase.com/docs/guides/database/secure-data.
 
+# Connected workspace upgrade
+
+For the current frontend, apply the additive workflow upgrade and configure Auth
+redirects and function origins as described in [connected-workspace.md](connected-workspace.md).
+The original category-only direct request insert below is replaced by the
+`submit_food_request` RPC, which requires a pickup slot and request UUID.
+Fresh projects install `schema.sql`, `request_validation.sql`, `inventory.sql`,
+then `workflows.sql`. Existing projects apply only the new upgrade after inspection.
+

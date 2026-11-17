@@ -1,9 +1,10 @@
 # Panther Food Pantry Management System
 
-**Backend update (PFPMS-1–4):** Auth, profiles, role/access management and student
-request submission now use Supabase. See [setup and integration instructions](docs/supabase-backend.md).
-The FastAPI/Docker architecture below is the original scaffold; the team is moving
-to Supabase. Frontend screens still need to connect to the supplied integration helpers.
+**Connected workspace:** The default React app now calls the Supabase business
+backend for sessions, requests, slots, donations, stock, pickups, and administration.
+See [connected setup, upgrade requirements, and test evidence](docs/connected-workspace.md).
+The shared hosted pantry still needs the documented SQL/function upgrade and
+production verification; local passing tests do not deploy that upgrade.
 
 A web application that replaces the university food pantry's paper forms and spreadsheets with one role-based system for **students**, **pantry staff** and **administrators**: assistance requests with pickup slots, inventory by lot and expiry date, donations, distributions and reports.
 
@@ -11,11 +12,13 @@ CINS 5318 Software Engineering · Prairie View A&M University · Fall 2026 · Gr
 
 ## Current technology stack
 
-The merged code contains a **React frontend and Supabase business backend**. The screens still use mock data; connecting their feature hooks to the supplied Supabase service is the next integration step.
+The code contains a **React frontend and Supabase business backend**. The default
+workspace uses live Auth and API calls. The original browser-only walkthrough is
+available explicitly with `VITE_PANTRY_MODE=demo`.
 
 | Layer | Implemented technology | Current role |
 | --- | --- | --- |
-| Frontend | React 18.3.1, JavaScript/JSX, Vite 6.4.5, HeroUI, Tailwind CSS 4, Framer Motion, react-hot-toast | Student, staff, and admin screens, hash routing, browser-persisted demo workflows |
+| Frontend | React 18.3.1, JavaScript/JSX, Vite 6.4.5, HeroUI, Tailwind CSS 4, Framer Motion, react-hot-toast | Connected student/staff/admin workspace; separate original demo |
 | Business backend | Supabase Auth, PostgreSQL, PostgREST, RLS, SQL RPCs | Accounts, roles/access, verified student IDs, category-based requests, inventory, atomic stock adjustments, availability |
 | Privileged function | Supabase Edge Function, TypeScript/Deno | Admin-authorized staff provisioning and private invitations |
 | Retained server | Python 3.12, FastAPI, Uvicorn, SQLAlchemy 2, psycopg 3 | Health checks, optional database readiness, and built React hosting |
@@ -35,23 +38,28 @@ Read [current architecture and integration boundaries](docs/architecture/current
 
 ## Run it locally
 
-### Frontend demo
+### Connected frontend
 
 Use Node.js 22 and npm:
 
 ```bash
 cd frontend
 npm ci
+# Copy .env.example to .env and upgrade/configure the target backend first.
 npm run dev
 ```
 
-Open http://localhost:5173. Sample accounts shown on the sign-in pages belong to the mock UI, not Supabase Auth. Run `npm test` and `npm run build` in `frontend/` to check helpers and the bundle.
+Open http://localhost:5173 and use real Supabase accounts. Run `npm test` and
+`npm run build` in `frontend/`. For the separate sample walkthrough, explicitly
+set `VITE_PANTRY_MODE=demo` before starting/building; sample accounts work only there.
 
 ### Supabase backend
 
 From `frontend/`, run `node scripts/pantry-terminal.mjs` to sign in, or add `register` to register your own student account. Follow [the backend guide](docs/supabase-backend.md) for email confirmation, admin bootstrap, staff invitations, schema setup, and tests. Use a separate pantry password, not a campus password.
 
-For browser integration, copy `frontend/.env.example` to `frontend/.env`. Its public URL and publishable key configure `src/lib/supabase.js`; environment configuration alone does not switch existing screens to live data. Never put service-role secrets in frontend variables.
+Copy `frontend/.env.example` to `frontend/.env`. Its public URL and publishable key
+configure `src/lib/supabase.js`. Apply the [connected upgrade](docs/connected-workspace.md)
+before using the default live workspace. Never put service-role secrets in frontend variables.
 
 ### Retained Docker scaffold
 

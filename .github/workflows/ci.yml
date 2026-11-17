@@ -6,6 +6,36 @@ on:
     branches: [main]
 
 jobs:
+  connected:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps --no-shell chromium
+        working-directory: frontend
+      - name: Start isolated Auth, API, database, and inbox
+        run: npx --yes supabase@3.2.0 start -x realtime,storage-api,imgproxy,postgres-meta,studio,logflare,vector,supavisor > /tmp/pantry-local-start.log
+      - run: node scripts/install-local-database.mjs
+      - name: Start local staff provisioning function
+        run: |
+          npx --yes supabase@3.2.0 functions serve provision-staff --env-file supabase/functions/.env.example > /tmp/pantry-functions.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail -X OPTIONS http://127.0.0.1:54321/functions/v1/provision-staff > /dev/null; then break; fi
+            sleep 1
+          done
+      - name: Real API, Auth, email, concurrency, and browser journeys
+        run: npm run test:connected
+        working-directory: frontend
+      - name: Check database security
+        run: npx --yes supabase@3.2.0 db advisors --type security --level warn --fail-on error
+      - name: Remove isolated test stack
+        if: always()
+        run: npx --yes supabase@3.2.0 stop --no-backup
+
   database:
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -51,6 +81,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps --no-shell chromium
       - run: npm run build
+        env:
+          VITE_PANTRY_MODE: demo
       - run: npm run test:e2e
       - name: Upload browser report and failure traces
         if: always()

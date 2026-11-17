@@ -101,7 +101,12 @@ try {
     0,
   );
   console.log("PASS: two simultaneous decrements cannot make stock negative");
-  const request = await student.submitRequest({ categories: ["Canned food"] });
+  await staff.adjustStock({ lotId: lot.id, delta: 1, reason: "Request availability fixture" });
+  const slot = await staff.savePickupSlot({
+    startsAt: new Date(Date.now() + 86400000).toISOString(),
+    capacity: 1,
+  });
+  const request = await student.submitRequest({ categories: ["Canned food"], slotId: slot.id });
   assert.equal(request.student_id, fixtures.student.id);
   const staffOwnRequests = await staff.myRequests();
   assert.ok(!staffOwnRequests.some((value) => value.id === request.id));

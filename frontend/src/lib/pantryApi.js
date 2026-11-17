@@ -16,6 +16,103 @@ export function createPantryApi(client) {
     return { user, profile, role: access.role };
   }
   return {
+    onAuthChange(callback) {
+      const { data } = client.auth.onAuthStateChange((event) => callback(event));
+      return () => data.subscription.unsubscribe();
+    },
+    async requestPasswordReset(email, redirectTo) {
+      return unwrap(await client.auth.resetPasswordForEmail(email.trim(), { redirectTo }));
+    },
+    async updatePassword(password) {
+      return unwrap(await client.auth.updateUser({ password }));
+    },
+    async listRecords(table) {
+      const allowed = [
+        "profiles",
+        "food_requests",
+        "inventory_items",
+        "inventory_lots",
+        "stock_adjustments",
+        "donations",
+        "donation_lines",
+        "pickup_lines",
+        "operations_audit",
+        "access_audit",
+        "student_id_audit",
+      ];
+      if (!allowed.includes(table)) throw new Error("Unsupported record type.");
+      const rows = [];
+      for (let offset = 0; ; offset += 500) {
+        const page = unwrap(
+          await client
+            .from(table)
+            .select("*")
+            .order("id")
+            .range(offset, offset + 499),
+        );
+        rows.push(...page);
+        if (page.length < 500) return rows;
+      }
+    },
+    async pickupSlots() {
+      return unwrap(await client.rpc("list_pickup_slots"));
+    },
+    async studentDirectory() {
+      return unwrap(await client.rpc("student_directory"));
+    },
+    async createWalkIn({ id, studentId, categories }) {
+      return unwrap(
+        await client.rpc("create_walk_in", {
+          p_id: id,
+          p_student: studentId,
+          p_categories: categories,
+        }),
+      );
+    },
+    async savePickupSlot({ id = null, startsAt, capacity, active = true }) {
+      return unwrap(
+        await client.rpc("save_pickup_slot", {
+          p_id: id,
+          p_starts_at: startsAt,
+          p_capacity: capacity,
+          p_active: active,
+        }),
+      );
+    },
+    async reserveRequest({ id, categories, slotId, note = "" }) {
+      return unwrap(
+        await client.rpc("submit_food_request", {
+          p_id: id,
+          p_categories: categories,
+          p_slot_id: slotId,
+          p_note: note,
+        }),
+      );
+    },
+    async transitionRequest({ id, status, note = "" }) {
+      return unwrap(
+        await client.rpc("transition_food_request", { p_id: id, p_status: status, p_note: note }),
+      );
+    },
+    async receiveDonation({ id, donor, receivedDate, lines }) {
+      return unwrap(
+        await client.rpc("receive_donation", {
+          p_id: id,
+          p_donor: donor,
+          p_received: receivedDate,
+          p_lines: lines,
+        }),
+      );
+    },
+    async completePickup({ requestId, lines, idChecked }) {
+      return unwrap(
+        await client.rpc("complete_pickup", {
+          p_request_id: requestId,
+          p_lines: lines,
+          p_id_checked: idChecked,
+        }),
+      );
+    },
     async registerStudent({ email, password, displayName = "" }) {
       if (!/^[^@\s]+@pvamu\.edu$/i.test(email.trim())) {
         throw new Error("Use your pvamu.edu email address.");
@@ -85,7 +182,7 @@ export function createPantryApi(client) {
         }),
       );
     },
-    async submitRequest({ categories, pickupNote = "" }) {
+    async submitRequest({ categories, pickupNote = "", slotId, id = crypto.randomUUID() }) {
       if (
         !Array.isArray(categories) ||
         categories.length < 1 ||
@@ -96,15 +193,14 @@ export function createPantryApi(client) {
       }
       if (typeof pickupNote !== "string" || pickupNote.length > 500)
         throw new Error("Pickup note must be at most 500 characters.");
+      if (!slotId) throw new Error("Choose a pickup slot.");
       return unwrap(
-        await client
-          .from("food_requests")
-          .insert({
-            requested_categories: [...new Set(categories.map((value) => value.trim()))],
-            pickup_note: pickupNote,
-          })
-          .select()
-          .single(),
+        await client.rpc("submit_food_request", {
+          p_id: id,
+          p_categories: [...new Set(categories.map((value) => value.trim()))],
+          p_note: pickupNote,
+          p_slot_id: slotId,
+        }),
       );
     },
     async myRequests() {

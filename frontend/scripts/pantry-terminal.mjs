@@ -69,7 +69,10 @@ try {
         }
         else if (action === '9') display(await api.updateItem(await ask('Item UUID: '), { name: await ask('Name: '), category: await ask('Category: '), unit: await ask('Unit: ') }));
         else if (action === '10') display(await api.updateLot(await ask('Lot UUID: '), { storageLocation: await ask('Storage location: '), receivedDate: await ask('Received date YYYY-MM-DD: '), expiryDate: (await ask('Expiry date (blank if none): ')) || null }));
-        else if (action === '11') display(await api.submitRequest({ categories: (await ask('Categories, comma-separated: ')).split(','), pickupNote: await ask('Pickup note (optional): ') }));
+        else if (action === '11') {
+          display(await api.pickupSlots());
+          display(await api.submitRequest({ categories: (await ask('Categories, comma-separated: ')).split(','), slotId: await ask('Pickup slot UUID: '), pickupNote: await ask('Pickup note (optional): ') }));
+        }
         else if (action === '12') display(await api.myRequests());
         else if (action === '13') { await api.setUserAccess({ userId: await ask('User UUID: '), role: await ask('Role [student/staff/admin]: '), enabled: (await ask('Enabled? [yes/no]: ')) === 'yes' }); console.log('Access updated.'); }
         else if (action === '14') display(await api.stockHistory(await ask('Lot UUID: ')));

@@ -1,5 +1,12 @@
 # Current stack and integration boundaries
 
+**November 17, 2026 update:** The default entry point now renders the connected
+workspace in `frontend/src/features/live`. All business requests use `pantryApi.js`
+and Supabase. `supabase/workflows.sql` adds transactional slot reservations,
+donations, decisions, walk-ins, and pickups. The original screens below remain a
+separate explicit demo. See [current connected architecture and upgrade](../connected-workspace.md).
+The remainder of this file is the October baseline, preserved for context.
+
 Updated October 22, 2026, against the merged frontend and Supabase backend code.
 Dependency manifests and SQL sources are authoritative for exact versions and contracts.
 

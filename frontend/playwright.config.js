@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 2,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    channel: "chromium",
+    channel: process.env.PANTRY_BROWSER_CHANNEL || "chromium",
     baseURL: "http://127.0.0.1:4173",
     timezoneId: "America/Chicago",
     locale: "en-US",
@@ -18,7 +18,7 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "node_modules/.bin/vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    command: "node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173 --strictPort",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: false,
   },

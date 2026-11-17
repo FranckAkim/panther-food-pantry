@@ -3,6 +3,8 @@ import { createStaffHandler } from './handler.mjs';
 import { withCors } from './cors.mjs';
 import { allowedOrigins } from './cors-config.mjs';
 
+const browserOrigins = (Deno.env.get('PANTRY_ALLOWED_ORIGINS') || '').split(',').map(value => value.trim()).filter(Boolean);
+
 Deno.serve(withCors(async request => {
   // The gateway JWT check is disabled for modern Auth signing keys. Every request
   // is independently verified by Auth.getUser and live database admin-role checks.
@@ -15,4 +17,4 @@ Deno.serve(withCors(async request => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   return await createStaffHandler({ userClient, adminClient })(request);
-}, allowedOrigins));
+}, browserOrigins.length ? browserOrigins : allowedOrigins));
