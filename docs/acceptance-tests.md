@@ -36,8 +36,8 @@ is a separate assessment and must change only after executing the real journey.
 | A15 | Admin provisions staff, changes roles, disables access, and protects the last admin | Helper/handler tests; SQL access suite; mock-browser user creation | Blocked: I1, I5 |
 | A16 | Student history, stock history, reports, and audit agree after a completed journey | Domain/report tests; mock-browser filtering/audit pagination | Blocked: I3, I4, I5 |
 | A17 | Real signup email reaches the authorized inbox and its link works | Confirmation state observed historically; inbox delivery unverified | Not run: I6 |
-| A18 | Keyboard-only user can complete each core form and recover from validation errors | Some UI semantics exist; no complete manual acceptance record | Not run |
-| A19 | Student/staff screens work on narrow mobile and desktop layouts | Existing browser suite uses desktop Chromium | Not run |
+| A18 | Keyboard-only user can complete each core form and recover from validation errors | Browser checks: skip link, keyboard sign-in, password-help Escape/focus restoration, mobile navigation Escape; other forms/error recovery remain untested | Partial mock coverage; full acceptance not run |
+| A19 | Student/staff screens work on narrow mobile and desktop layouts | Desktop workflows plus 390×844 student home/request/history and staff donation/navigation checks | Partial mock coverage; device matrix not run |
 | A20 | Network failure, expired session, and denied operation produce an actionable error without duplicate writes | Limited helper coverage; no connected browser journey | Blocked: I1, I2, I3 |
 
 ## Integration gates

@@ -50,6 +50,8 @@ const sqlArgs = [
   "-i",
   container,
   "psql",
+  "-h",
+  "127.0.0.1",
   "-U",
   "postgres",
   "-X",
@@ -75,15 +77,20 @@ try {
     "postgres:16",
   ]);
   created = true;
+  // The image starts a temporary socket-only server during initialization.
+  // Probe TCP with the same client used below so that server cannot signal readiness.
   let ready = false;
+  let readinessError = "";
   for (let attempt = 0; attempt < 40; attempt++) {
-    if ((await docker(["exec", container, "pg_isready", "-U", "postgres"])).code === 0) {
+    const probe = await docker([...sqlArgs, "-c", "select 1;"]);
+    if (probe.code === 0) {
       ready = true;
       break;
     }
+    readinessError = probe.stderr || probe.stdout;
     await delay(500);
   }
-  assert.ok(ready, "PostgreSQL did not become ready");
+  assert.ok(ready, `PostgreSQL did not become ready over TCP: ${readinessError}`);
   await checked(["cp", sources, `${container}:/tmp/supabase`]);
   await checked([
     ...sqlArgs,
