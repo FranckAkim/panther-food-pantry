@@ -31,6 +31,7 @@ Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `frontend/.env` (
 ```sh
 npm run supabase:check                # Auth endpoint reachable, key accepted
 npm run supabase:check -- TABLE_NAME  # Also query a table (anonymous users are refused: expected)
+npm run supabase:check -- --contracts # Resolve the hosted read RPCs without signing in or changing records
 ```
 
 In **Authentication → URL Configuration**, add each address the app runs on to **Redirect URLs** (for example `http://localhost:5173/**`), so password-reset and confirmation links return to the app. The app always names its own address as the redirect; Supabase falls back to the **Site URL** only when that address is not in the list, so set the Site URL to the main address (the deployed one, once it exists).
