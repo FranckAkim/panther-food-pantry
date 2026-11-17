@@ -127,6 +127,9 @@
   justify-content: space-between;
   gap: 12px;
 }
+.staff-requests .sr-card-empty {
+  margin: 12px 0 0;
+}
 .staff-requests .sr-pickup-summary {
   margin: 12px 0 0;
   padding: 0;
@@ -604,4 +607,28 @@
   .staff-requests .sr-distribution-footer > div {
     justify-content: flex-end;
   }
+}
+
+.staff-requests .sr-item-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.staff-requests .sr-qty-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.staff-requests .sr-qty-input {
+  width: 76px;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+.staff-requests .sr-requested-unavailable {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fff6dd;
+  color: #5c4300;
+  font-size: 14px;
 }

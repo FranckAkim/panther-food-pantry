@@ -1,8 +1,9 @@
-import { usePersistedState } from "../../../hooks/usePersistedState.js";
-import { adminUsersKey, initialAdminUsers } from "./data.js";
-import { initialStudents } from "../../stock/data/students.js";
 import { useMemo, useState } from "react";
-import { mergeAdminUsers, validateUserChange, matchesEmail, roleLabel } from "./model.js";
+import { useQuery } from "@tanstack/react-query";
+import { directoryUsers, validateAccessChange, roleLabel } from "./model.js";
+import { fetchAccounts, fetchStudents, setAccess } from "../../../api/operations.js";
+import { affected, keys } from "../../../api/keys.js";
+import { useRefresh } from "../../../lib/queryClient.js";
 import { usePendingAction } from "../../../components/loading/ActionContext.js";
 import { notifyError } from "../../../components/Notifications.jsx";
 import { localDate } from "../../../lib/dates.js";
@@ -15,54 +16,46 @@ import { Badge } from "../../../components/ui/Badge.jsx";
 import { EmptyState } from "../../../components/ui/EmptyState.jsx";
 import { AddStaff } from "./AddStaffDialog.jsx";
 import { UserChangeDialog } from "./UserChangeDialog.jsx";
+import { AccountAvatar } from "../../../components/AccountAvatar.jsx";
 
 export function Users({ profile, notify }) {
-  const [storedUsers, setUsers] = usePersistedState(adminUsersKey, initialAdminUsers);
-  const [students] = usePersistedState("panther-students-v1", initialStudents);
-  const [accounts] = usePersistedState("panther-mock-accounts", []);
+  const refresh = useRefresh();
+  const accountsQuery = useQuery({ queryKey: keys.accounts, queryFn: fetchAccounts });
+  const studentsQuery = useQuery({ queryKey: keys.students, queryFn: fetchStudents });
+  const accounts = useMemo(() => accountsQuery.data || [], [accountsQuery.data]);
   const users = useMemo(
-    () => mergeAdminUsers(storedUsers, students, accounts),
-    [storedUsers, students, accounts],
+    () => directoryUsers(accounts, studentsQuery.data || []),
+    [accounts, studentsQuery.data],
   );
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [adding, setAdding] = useState(false);
   const [change, setChange] = useState(null);
-  const [studentId, setStudentId] = useState("");
-  const [roleEmail, setRoleEmail] = useState("");
   const { pending } = usePendingAction();
   const filtered = users.filter(
     (user) =>
       (filter === "All" ||
         user.role === { Students: "student", Staff: "staff", Admins: "admin" }[filter]) &&
-      `${user.name} ${user.email} ${user.studentId || ""} ${(user.aliases || []).join(" ")}`
+      `${user.name} ${user.email} ${user.studentId || ""}`
         .toLowerCase()
         .includes(query.trim().toLowerCase()),
   );
-  function saveChange(event) {
+  async function saveChange(event) {
     event.preventDefault();
-    const patch =
-      change.patch.role === "student"
-        ? { ...change.patch, studentId: studentId.trim().toUpperCase() }
-        : change.patch;
-    if (change.patch.role && change.patch.role !== "student" && !change.user.email)
-      patch.email = roleEmail.trim().toLowerCase();
-    let saved = false;
-    setUsers((current) => {
-      const all = mergeAdminUsers(current, students, accounts);
-      const target = all.find((user) => user.id === change.user.id);
-      const error = validateUserChange(all, target, patch, profile.email);
-      if (error) {
-        notifyError(error);
-        return current;
-      }
-      saved = true;
-      return all.map((user) => (user.id === target.id ? { ...user, ...patch } : user));
-    });
-    if (saved) {
-      notify(`${change.user.name}'s account updated.`);
-      setChange(null);
+    const target = users.find((user) => user.id === change.user.id);
+    const error = validateAccessChange(users, target, change.patch, profile.id);
+    if (error) {
+      notifyError(error);
+      return;
     }
+    await setAccess(
+      target.id,
+      change.patch.role ?? target.role,
+      change.patch.active ?? target.active,
+    );
+    await refresh(affected.accounts);
+    notify(`${change.user.name}'s account updated.`);
+    setChange(null);
   }
   const lastSignIn = (user) =>
     !user.lastSignIn
@@ -102,11 +95,7 @@ export function Users({ profile, notify }) {
           ))}
         </div>
       </div>
-      <DataLoader
-        queryKey={JSON.stringify([query, filter])}
-        initialLoading={false}
-        label="Loading users…"
-      >
+      <DataLoader queries={[accountsQuery, studentsQuery]} label="Loading users…">
         <div className="table-wrap">
           <table className="data-table admin-users-table">
             <thead>
@@ -123,21 +112,29 @@ export function Users({ profile, notify }) {
             </thead>
             <tbody>
               {filtered.map((user) => {
-                const self = matchesEmail(user, profile.email);
+                const self = user.id === profile.id;
                 return (
                   <tr key={user.id}>
                     <td>
-                      <strong>{user.name}</strong>
-                      {self && <span className="muted"> (you)</span>}
-                      {user.provisional ? (
-                        <small>Provisional profile</small>
-                      ) : (
-                        !user.email && <small>No sign-in account</small>
-                      )}
+                      <div className="person-cell">
+                        <AccountAvatar
+                          profileId={user.provisional ? null : user.id}
+                          name={user.name}
+                        />
+                        <div>
+                          <strong>{user.name}</strong>
+                          {self && <span className="muted"> (you)</span>}
+                          {user.provisional ? (
+                            <small>Provisional profile</small>
+                          ) : (
+                            !user.email && <small>No sign-in account</small>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="muted">{user.email || "—"}</td>
                     <td>
-                      {self ? (
+                      {self || user.provisional ? (
                         roleLabel(user.role)
                       ) : (
                         <select
@@ -146,8 +143,6 @@ export function Users({ profile, notify }) {
                           disabled={!!pending}
                           value={user.role}
                           onChange={(event) => {
-                            setStudentId(user.studentId || "");
-                            setRoleEmail(user.email || "");
                             setChange({
                               user,
                               patch: { role: event.target.value },
@@ -167,7 +162,7 @@ export function Users({ profile, notify }) {
                     </td>
                     <td className="muted">{lastSignIn(user)}</td>
                     <td>
-                      {!self && (
+                      {!self && !user.provisional && (
                         <button
                           type="button"
                           disabled={!!pending}
@@ -190,37 +185,17 @@ export function Users({ profile, notify }) {
       </DataLoader>
       {adding && (
         <AddStaff
-          users={users}
+          accounts={accounts}
           onClose={() => setAdding(false)}
-          onSave={(user) => {
-            let saved = false;
-            setUsers((current) => {
-              const all = mergeAdminUsers(current, students, accounts);
-              if (all.some((existing) => matchesEmail(existing, user.email))) {
-                notifyError("An account with this email already exists.");
-                return current;
-              }
-              saved = true;
-              return [...all, user];
-            });
-            if (saved) {
-              setAdding(false);
-              notify(`${user.name}'s mock staff account is ready.`);
-            }
+          onSave={async (account) => {
+            await setAccess(account.id, "staff", true);
+            await refresh(affected.accounts);
+            setAdding(false);
+            notify(`${account.name} now has staff access.`);
           }}
         />
       )}
-      {change && (
-        <UserChangeDialog
-          change={change}
-          setChange={setChange}
-          saveChange={saveChange}
-          studentId={studentId}
-          setStudentId={setStudentId}
-          roleEmail={roleEmail}
-          setRoleEmail={setRoleEmail}
-        />
-      )}
+      {change && <UserChangeDialog change={change} setChange={setChange} saveChange={saveChange} />}
     </>
   );
 }

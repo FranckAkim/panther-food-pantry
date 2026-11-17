@@ -1,4 +1,5 @@
 import { useAppNavigation } from "./useAppNavigation.js";
+import { LoadingState } from "../components/loading/LoadingState.jsx";
 import { PageHeading } from "../components/ui/PageHeading.jsx";
 import { Card } from "../components/ui/Card.jsx";
 import { Button } from "../components/ui/Button.jsx";
@@ -16,6 +17,10 @@ import "../styles.css";
 
 export function App() {
   const {
+    ready,
+    recovery,
+    finishRecovery,
+    signedIn,
     workspaceNavigate,
     notify,
     navigate,
@@ -24,7 +29,6 @@ export function App() {
     authenticated,
     portal,
     page,
-    setProfile,
     area,
     signOut,
     mobileMenu,
@@ -70,14 +74,27 @@ export function App() {
       >
         Skip to content
       </a>
-      {authPage || !authenticated ? (
+      {!ready ? (
+        <main id="main-content" tabIndex={-1} className="app-loading">
+          <LoadingState label="Loading Panther Pantry…" />
+        </main>
+      ) : recovery ? (
+        <Auth
+          key="reset-password"
+          page="reset-password"
+          role={profile?.role || "student"}
+          navigate={navigate}
+          notify={notify}
+          onPasswordSaved={finishRecovery}
+        />
+      ) : authPage || !authenticated ? (
         <Auth
           key={`${portal}-${page}`}
           page={page === "register" ? "register" : "sign-in"}
           role={page === "register" ? "student" : portal}
           navigate={navigate}
           notify={notify}
-          onSignIn={setProfile}
+          onSignedIn={signedIn}
         />
       ) : area === "student" && ["home", "request", "history", "request-status"].includes(page) ? (
         <Student
@@ -98,6 +115,7 @@ export function App() {
           waitingCount={waitingCount}
           profile={profile}
           signOut={signOut}
+          notify={notify}
           page={page}
           contentProps={contentProps}
           route={route}

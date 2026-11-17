@@ -9,6 +9,7 @@ backend/static/
 # Node
 node_modules/
 frontend/dist/
+frontend/dist-e2e/
 frontend/playwright-report/
 frontend/test-results/
 **/pantry-live-fixtures*.json
@@ -20,3 +21,7 @@ frontend/test-results/
 .idea/
 .DS_Store
 Thumbs.db
+frontend/playwright-report/
+frontend/test-results/
+supabase/.branches/
+supabase/.temp/

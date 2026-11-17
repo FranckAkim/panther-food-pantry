@@ -2,7 +2,6 @@ import { Modal } from "../../../components/ui/Modal.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
 import { AsyncForm } from "../../../components/ui/AsyncForm.jsx";
 import { notifyError } from "../../../components/Notifications.jsx";
-import { dateText, today } from "../utils/formatters.js";
 import { Field } from "../../../components/ui/Field.jsx";
 
 export function CreateStudent({ students, onClose, onSave }) {
@@ -28,19 +27,16 @@ export function CreateStudent({ students, onClose, onSave }) {
           e.preventDefault();
           const data = formData;
           const studentId = data.get("studentId").trim().toUpperCase();
-          if (students.some((s) => s.id === studentId)) {
+          if (students.some((s) => s.studentId === studentId)) {
             notifyError(
               "A profile with this student ID already exists. Search for their existing profile.",
             );
             return;
           }
-          onSave({
+          return onSave({
             name: data.get("name").trim(),
-            id: studentId,
-            provisional: true,
-            checked: data.get("checked") ? dateText(today(), false) : "",
-            lastPickup: "—",
-            request: "",
+            studentId,
+            idChecked: Boolean(data.get("checked")),
           });
         }}
       >

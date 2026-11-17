@@ -20,7 +20,7 @@ export function HistoryPage({ open, navigate, past }) {
                 {open.fullPickupDate} · {open.slot}
               </small>
             </span>
-            <Badge>{open.status === "Waiting" ? "Submitted" : open.status}</Badge>
+            <Badge>{open.studentStatus}</Badge>
             <span aria-hidden="true">→</span>
           </button>
         </section>
@@ -46,7 +46,7 @@ export function HistoryPage({ open, navigate, past }) {
                     <td>{request.fullPickupDate}</td>
                     <td>{request.slot}</td>
                     <td>
-                      <Badge>{request.status}</Badge>
+                      <Badge>{request.studentStatus}</Badge>
                     </td>
                     <td>{request.declineReason || "—"}</td>
                   </tr>

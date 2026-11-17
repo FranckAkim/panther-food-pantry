@@ -452,8 +452,24 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
-.stock-donation-item-choice {
+.stock-donation-item-choice,
+.stock-donation-item-photo,
+.stock-donation-new-note {
   grid-column: 1 / -1;
+}
+.stock-donation-span-2 {
+  grid-column: span 2;
+}
+.stock-donation-row-start {
+  grid-column-start: 1;
+}
+.stock-donation-new-note {
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.stock-donation-item-photo .stock-photo-field {
+  grid-template-columns: 120px minmax(0, 1fr);
 }
 .stock-donation-total {
   display: flex;
@@ -532,10 +548,16 @@
 }
 .stock-donation-details li {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
+}
+.stock-donation-details li > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
 }
 .stock-student-table .stock-table {
   min-width: 860px;
@@ -767,6 +789,9 @@
   .stock-donation-item-fields {
     grid-template-columns: 1fr;
   }
+  .stock-donation-span-2 {
+    grid-column: auto;
+  }
   .stock-donation-next {
     margin: 0 16px 20px;
   }
@@ -792,4 +817,58 @@
   .stock-title-status {
     font-size: 24px;
   }
+}
+
+/* Item photos */
+.stock-item-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.stock-title-photo.item-photo--thumb {
+  width: 64px;
+  height: 48px;
+}
+.stock-photo-field {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+.stock-photo-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stock-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+.stock-photo-pick {
+  position: relative;
+  cursor: pointer;
+}
+.stock-photo-pick:focus-within {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+.stock-photo-pick.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+@media (max-width: 520px) {
+  .stock-photo-field,
+  .stock-donation-item-photo .stock-photo-field {
+    grid-template-columns: 1fr;
+  }
+  .stock-photo-field > .item-photo {
+    max-width: 240px;
+  }
+}
+.stock-profile .stock-profile-photo {
+  align-items: flex-start;
+  margin-top: 16px;
 }

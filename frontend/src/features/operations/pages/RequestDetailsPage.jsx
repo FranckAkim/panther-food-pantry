@@ -2,6 +2,7 @@ import { PageHeading } from "../../../components/ui/PageHeading.jsx";
 import { Status } from "../components/Status.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { Button } from "../../../components/ui/Button.jsx";
+import { AccountAvatar } from "../../../components/AccountAvatar.jsx";
 
 export function RequestDetailsPage({ textLink, activeRequest, openDecline, approve }) {
   return (
@@ -20,7 +21,14 @@ export function RequestDetailsPage({ textLink, activeRequest, openDecline, appro
         <dl>
           <div>
             <dt>Student</dt>
-            <dd>{activeRequest.name}</dd>
+            <dd className="person-cell">
+              <AccountAvatar
+                profileId={activeRequest.profileId}
+                name={activeRequest.name}
+                size="lg"
+              />
+              {activeRequest.name}
+            </dd>
           </div>
           <div>
             <dt>Student ID</dt>

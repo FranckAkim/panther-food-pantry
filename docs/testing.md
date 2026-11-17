@@ -1,5 +1,21 @@
 # DevOps test baseline
 
+## Connected UI browser suite — November 17, 2026
+
+PR #15 replaces the previous localStorage demo browser scenarios with 13 controlled
+HTTP-fixture scenarios for the connected frontend. `npm run test:e2e` now builds its
+own isolated `dist-e2e` bundle using a fake Supabase origin; Playwright 1.64.1 is a
+locked development dependency. No production URL/key, real account, or hosted write
+is used. See [frontend browser-test setup](../frontend/README.md#browser-regression-tests).
+
+Coverage includes Auth session persistence/logout, wrong portal, keyboard focus,
+mobile layout/navigation/Escape, request submission and cancellation, API rejection,
+staff approval, donations, walk-in ID checks/distribution/stale selection, report
+export, and PKCE password-recovery callback/reload/confirmation/expiry/cleanup.
+The SDK's verifier must match the intercepted reset challenge. A real email is not
+sent or clicked, so this suite does not establish production email deliverability.
+Earlier browser-demo results below are historical.
+
 ## Repeatable database checks and system acceptance
 
 Run `node scripts/test-database.mjs` from the repo root with Node 22 and Docker.

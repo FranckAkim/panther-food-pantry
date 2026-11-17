@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { mockLatency, waitForMockResponse } from "../../lib/mockLatency.js";
 import { notifyError } from "../Notifications.jsx";
 import { ActionContext } from "./ActionContext.js";
 
+// Runs one user action at a time (form submit or async button) and shows its errors.
 export function LoadingProvider({ children }) {
   const [pending, setPending] = useState(null);
   const request = useRef(null);
@@ -21,14 +21,13 @@ export function LoadingProvider({ children }) {
       request.current?.controller.abort();
     };
   }, [cancel]);
-  const run = useCallback(async (key, action, delay = mockLatency.action) => {
+  const run = useCallback(async (key, action) => {
     if (request.current) return;
     const controller = new AbortController();
     request.current = { key, controller };
     setPending(key);
     try {
-      await waitForMockResponse(delay, controller.signal);
-      if (!controller.signal.aborted) await action(controller.signal);
+      await action(controller.signal);
     } catch (error) {
       if (error.name !== "AbortError")
         notifyError(error.message || "Something went wrong. Please try again.");

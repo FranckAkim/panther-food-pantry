@@ -1,45 +1,61 @@
-import { usePersistedState } from "../../../hooks/usePersistedState.js";
-import { initialRequests, initialPickups } from "../../operations/data.js";
-import { initialItems } from "../../stock/data/inventory.js";
-import { initialSlots } from "../../stock/data/pickupSlots.js";
-import { useState, useRef, useEffect } from "react";
-import { onHand, slotLabel, dateLabel } from "../utils.js";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { affected, keys } from "../../../api/keys.js";
+import {
+  cancelRequest as cancelOwnRequest,
+  fetchMyRequests,
+  submitRequest,
+} from "../../../api/requests.js";
+import { fetchAvailableFoods, fetchCategoryAvailability } from "../../../api/inventory.js";
+import { fetchSlots } from "../../../api/operations.js";
+import { addDays, dayLabel, pantryToday } from "../../../api/time.js";
+import { useRefresh } from "../../../lib/queryClient.js";
 import { notifyError } from "../../../components/Notifications.jsx";
 
-export function useStudentPortal({ page, navigate, notify, profile, signOut }) {
-  const [requests, setRequests] = usePersistedState("panther-staff-requests", initialRequests);
-  const [, setPickups] = usePersistedState("panther-staff-pickups", initialPickups);
-  const [ownRequestIds, setOwnRequestIds] = usePersistedState("panther-student-request-ids", []);
-  const [inventory] = usePersistedState("panther-inventory-v1", initialItems);
-  const [slots, setSlots] = usePersistedState("panther-pickup-slots-v1", initialSlots);
+// Students can book pickups this many days ahead.
+const BOOKING_WINDOW_DAYS = 30;
+const OPEN_STATUSES = ["submitted", "approved"];
+// Personal-care products are handed out at the desk, not requested.
+export const REQUESTABLE = (item) => item.category !== "Personal care";
+
+export function useStudentPortal({ page, navigate, notify, profile }) {
+  const refresh = useRefresh();
+  const today = pantryToday();
+  const lastDay = addDays(today, BOOKING_WINDOW_DAYS);
+  const requestsQuery = useQuery({ queryKey: keys.myRequests, queryFn: fetchMyRequests });
+  const foodsQuery = useQuery({
+    queryKey: keys.foods,
+    queryFn: fetchAvailableFoods,
+    enabled: page === "request",
+  });
+  const availabilityQuery = useQuery({
+    queryKey: keys.categoryAvailability,
+    queryFn: fetchCategoryAvailability,
+    enabled: page === "home",
+  });
   const [foodId, setFoodId] = useState("");
+  const slotsQuery = useQuery({
+    queryKey: keys.slots(today, lastDay),
+    queryFn: () => fetchSlots(today, lastDay),
+    enabled: page === "request" && Boolean(foodId),
+  });
   const [day, setDay] = useState("");
   const [slotId, setSlotId] = useState("");
   const [note, setNote] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [cancelRequest, setCancelRequest] = useState(null);
   const [submitted, setSubmitted] = useState(null);
-  const submitting = useRef(false);
-  const own = requests.filter(
-    (request) => ownRequestIds.includes(request.id) && request.studentId === profile.studentId,
-  );
-  const open = own.find((request) => ["Waiting", "Approved"].includes(request.status));
-  const past = own.filter((request) => !["Waiting", "Approved"].includes(request.status));
-  const foods = inventory.filter((item) => item.category !== "Personal care" && onHand(item) > 0);
+  const requests = requestsQuery.data || [];
+  const open = requests.find((request) => OPEN_STATUSES.includes(request.dbStatus));
+  const past = requests.filter((request) => !OPEN_STATUSES.includes(request.dbStatus));
+  const foods = (foodsQuery.data || []).filter(REQUESTABLE);
   const food = foods.find((item) => item.id === foodId);
-  // Keep the design's sample calendar in sync with editable staff mock slots.
-  const days = [
-    ...new Set(slots.filter((slot) => slot.date >= "2026-10-15").map((slot) => slot.date)),
-  ].sort();
-  const daySlots = slots
-    .filter((slot) => slot.date === day)
-    .sort((a, b) => a.time.localeCompare(b.time));
+  const now = Date.now();
+  const upcoming = (slotsQuery.data || []).filter((slot) => Date.parse(slot.startsAt) > now);
+  const days = [...new Set(upcoming.map((slot) => slot.date))].sort();
+  const daySlots = upcoming.filter((slot) => slot.date === day);
   const selectedSlot = daySlots.find((slot) => slot.id === slotId);
-  const initials = profile.name
-    .split(" ")
-    .map((word) => word[0])
-    .slice(0, 2)
-    .join("");
+  const availability = (availabilityQuery.data || []).filter(REQUESTABLE);
   useEffect(() => {
     setAccountOpen(false);
   }, [page]);
@@ -49,9 +65,8 @@ export function useStudentPortal({ page, navigate, notify, profile, signOut }) {
     setDay("");
     setSlotId("");
   }
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
-    if (submitting.current) return;
     if (open) {
       notifyError("You already have an open request. Cancel it before choosing a new pickup.");
       return;
@@ -60,78 +75,46 @@ export function useStudentPortal({ page, navigate, notify, profile, signOut }) {
       notifyError("Select an available food item.");
       return;
     }
-    if (!selectedSlot || selectedSlot.booked >= selectedSlot.capacity) {
+    if (!selectedSlot || selectedSlot.remaining < 1) {
       notifyError("Choose an available pickup day and time.");
       return;
     }
-    submitting.current = true;
-    const time = slotLabel(selectedSlot);
-    const request = {
-      id: `student-${crypto.randomUUID()}`,
-      name: profile.name,
-      studentId: profile.studentId,
-      fullPickupDate: dateLabel(day),
-      date: day,
-      slotId,
-      slotReserved: true,
-      slot: time,
-      time: new Date(`2026-01-01T${selectedSlot.time}:00`).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-      }),
-      pickup: `${dateLabel(day)} · ${time}`,
-      sent: "Just now",
-      status: "Waiting",
-      note: note.trim(),
-      firstVisit: false,
-      foodId: food.id,
-      foodName: food.name,
-      requestedItems: [{ id: food.id, name: food.name, qty: 1 }],
-    };
-    setRequests((current) => [request, ...current]);
-    setOwnRequestIds((current) => [...current, request.id]);
-    setSlots((current) =>
-      current.map((slot) => (slot.id === slotId ? { ...slot, booked: slot.booked + 1 } : slot)),
-    );
-    setSubmitted(request);
+    try {
+      await submitRequest({ slotId: selectedSlot.id, itemId: food.id, note: note.trim() });
+    } catch (error) {
+      // The slot may have filled or the item run out since this page loaded.
+      await refresh([["slots"], keys.foods]);
+      throw error;
+    }
+    await refresh(affected.request);
+    setSubmitted({ foodName: food.name, fullPickupDate: dayLabel(day), slot: selectedSlot.label });
     setFoodId("");
     setDay("");
     setSlotId("");
     setNote("");
     navigate("/student/home");
-    submitting.current = false;
   }
-  function cancel() {
+  async function cancel() {
     if (!cancelRequest) return;
-    setRequests((current) =>
-      current.map((request) =>
-        request.id === cancelRequest.id
-          ? { ...request, status: "Cancelled", slotReserved: false }
-          : request,
-      ),
-    );
-    setPickups((current) => current.filter((pickup) => pickup.id !== cancelRequest.id));
-    if (cancelRequest.slotReserved && cancelRequest.slotId) {
-      setSlots((current) =>
-        current.map((slot) =>
-          slot.id === cancelRequest.slotId
-            ? { ...slot, booked: Math.max(0, slot.booked - 1) }
-            : slot,
-        ),
-      );
-    }
+    await cancelOwnRequest(cancelRequest.id);
+    await refresh(affected.request);
     setCancelRequest(null);
     notify("Your request was cancelled.");
     navigate("/student/home");
   }
 
   return {
+    queries: {
+      requests: requestsQuery,
+      foods: foodsQuery,
+      slots: slotsQuery,
+      availability: availabilityQuery,
+    },
     open,
     setCancelRequest,
     accountOpen,
     setAccountOpen,
-    initials,
-    inventory,
+    availability,
     submit,
     foodId,
     chooseFood,

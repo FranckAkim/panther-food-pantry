@@ -5,7 +5,6 @@ import { Asset } from "../components/Asset.jsx";
 import addStudentIcon from "../../../assets/stock-add-student.svg";
 import { Search } from "../components/Search.jsx";
 import { Filter } from "../components/Filter.jsx";
-import { DataLoader } from "../../../components/loading/DataLoader.jsx";
 import { StockTable } from "../components/StockTable.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import checkIcon from "../../../assets/stock-check.svg";
@@ -13,17 +12,21 @@ import { LinkButton } from "../components/LinkButton.jsx";
 import { EmptyState } from "../../../components/ui/EmptyState.jsx";
 import { CreateStudent } from "../components/CreateStudent.jsx";
 import { CheckStudent } from "../components/CheckStudent.jsx";
-import { dateText, today } from "../utils/formatters.js";
+import { createProvisionalStudent, verifyStudentId } from "../../../api/operations.js";
+import { affected } from "../../../api/keys.js";
+import { useRefresh } from "../../../lib/queryClient.js";
+import { AccountAvatar } from "../../../components/AccountAvatar.jsx";
 
-export function Students({ students, setStudents, showStudent, notify }) {
+export function Students({ students, showStudent, notify }) {
+  const refresh = useRefresh();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [creating, setCreating] = useState(false);
   const [checking, setChecking] = useState(null);
   const filtered = students.filter(
     (s) =>
-      `${s.name} ${s.id}`.toLowerCase().includes(query.toLowerCase()) &&
-      (filter === "all" || (filter === "unchecked" ? !s.checked : s.provisional)),
+      `${s.name} ${s.studentId}`.toLowerCase().includes(query.trim().toLowerCase()) &&
+      (filter === "all" || (filter === "unchecked" ? !s.idVerified : s.provisional)),
   );
   return (
     <>
@@ -44,18 +47,14 @@ export function Students({ students, setStudents, showStudent, notify }) {
             All
           </Filter>
           <Filter selected={filter === "unchecked"} onClick={() => setFilter("unchecked")}>
-            ID not checked · {students.filter((s) => !s.checked).length}
+            ID not checked · {students.filter((s) => !s.idVerified).length}
           </Filter>
           <Filter selected={filter === "provisional"} onClick={() => setFilter("provisional")}>
             Provisional · {students.filter((s) => s.provisional).length}
           </Filter>
         </div>
       </div>
-      <DataLoader
-        queryKey={JSON.stringify([query, filter])}
-        initialLoading={false}
-        label="Loading students…"
-      >
+      <>
         <StockTable className="stock-student-table">
           <thead>
             <tr>
@@ -73,13 +72,21 @@ export function Students({ students, setStudents, showStudent, notify }) {
           <tbody>
             {filtered.map((student) => (
               <tr key={student.id}>
-                <td className="stock-medium">{student.name}</td>
-                <td className="muted">{student.id}</td>
+                <td className="stock-medium">
+                  <span className="person-cell">
+                    <AccountAvatar
+                      profileId={student.provisional ? null : student.id}
+                      name={student.name}
+                    />
+                    {student.name}
+                  </span>
+                </td>
+                <td className="muted">{student.studentId || "—"}</td>
                 <td>
                   {student.provisional ? <Badge tone="neutral">Provisional</Badge> : "Has account"}
                 </td>
                 <td>
-                  {student.checked ? (
+                  {student.idVerified ? (
                     <span className="stock-checked">
                       <Asset src={checkIcon} />
                       Checked {student.checked}
@@ -99,7 +106,7 @@ export function Students({ students, setStudents, showStudent, notify }) {
                   )}
                 </td>
                 <td className="stock-student-action">
-                  {student.checked ? (
+                  {student.idVerified ? (
                     <LinkButton onClick={() => showStudent(student.id)}>View</LinkButton>
                   ) : (
                     <Button variant="secondary" onClick={() => setChecking(student)}>
@@ -117,13 +124,14 @@ export function Students({ students, setStudents, showStudent, notify }) {
             description="Try another name, student ID, or filter."
           />
         )}
-      </DataLoader>
+      </>
       {creating && (
         <CreateStudent
           students={students}
           onClose={() => setCreating(false)}
-          onSave={(student) => {
-            setStudents((old) => [...old, student]);
+          onSave={async (student) => {
+            await createProvisionalStudent(student);
+            await refresh(affected.students);
             setCreating(false);
             notify(`${student.name}'s provisional profile was created.`);
           }}
@@ -133,12 +141,9 @@ export function Students({ students, setStudents, showStudent, notify }) {
         <CheckStudent
           student={checking}
           onClose={() => setChecking(null)}
-          onSave={() => {
-            setStudents((old) =>
-              old.map((s) =>
-                s.id === checking.id ? { ...s, checked: dateText(today(), false) } : s,
-              ),
-            );
+          onSave={async () => {
+            await verifyStudentId(checking);
+            await refresh(affected.students);
             setChecking(null);
             notify("Student ID check recorded.");
           }}

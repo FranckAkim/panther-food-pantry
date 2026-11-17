@@ -11,12 +11,12 @@ import { RequestSubmittedDialog } from "./components/RequestSubmittedDialog.jsx"
 
 export function Student({ page, navigate, notify, profile, signOut }) {
   const {
+    queries,
     open,
     setCancelRequest,
     accountOpen,
     setAccountOpen,
-    initials,
-    inventory,
+    availability,
     submit,
     foodId,
     chooseFood,
@@ -36,7 +36,11 @@ export function Student({ page, navigate, notify, profile, signOut }) {
     cancel,
     submitted,
     setSubmitted,
-  } = useStudentPortal({ page, navigate, notify, profile, signOut });
+  } = useStudentPortal({ page, navigate, notify, profile });
+  const pageQueries = {
+    home: [queries.requests, queries.availability],
+    request: [queries.requests, queries.foods],
+  }[page] || [queries.requests];
   const requestCard = open && <RequestStatusCard open={open} setCancelRequest={setCancelRequest} />;
 
   return (
@@ -45,19 +49,19 @@ export function Student({ page, navigate, notify, profile, signOut }) {
         page={page}
         accountOpen={accountOpen}
         setAccountOpen={setAccountOpen}
-        initials={initials}
         profile={profile}
         signOut={signOut}
+        notify={notify}
       />
       <main className="student-main" id="main-content" tabIndex={-1}>
-        <DataLoader queryKey={page} label="Loading your pantry…">
+        <DataLoader queries={pageQueries} label="Loading your pantry…">
           {page === "home" && (
             <HomePage
               profile={profile}
               open={open}
               navigate={navigate}
               requestCard={requestCard}
-              inventory={inventory}
+              availability={availability}
             />
           )}
           {page === "request" && (
@@ -78,6 +82,7 @@ export function Student({ page, navigate, notify, profile, signOut }) {
               note={note}
               setNote={setNote}
               selectedSlot={selectedSlot}
+              slotsQuery={queries.slots}
             />
           )}
           {page === "request-status" && (
