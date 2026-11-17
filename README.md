@@ -1,5 +1,7 @@
 # Panther Food Pantry Management System
 
+**Live app:** [Open Panther Food Pantry](https://panther-food-pantry.vercel.app/)
+
 **Backend update (PFPMS-1–4):** Auth, profiles, role/access management and student
 request submission now use Supabase. See [setup and integration instructions](docs/supabase-backend.md).
 The FastAPI/Docker architecture below is the original scaffold; the team is moving
