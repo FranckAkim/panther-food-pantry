@@ -7,6 +7,7 @@
 **/.pytest_cache
 **/.ruff_cache
 frontend/dist
+frontend/dist-e2e
 frontend/playwright-report
 frontend/test-results
 **/pantry-live-fixtures*.json

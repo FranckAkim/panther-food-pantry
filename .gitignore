@@ -9,6 +9,7 @@ backend/static/
 # Node
 node_modules/
 frontend/dist/
+frontend/dist-e2e/
 frontend/playwright-report/
 frontend/test-results/
 **/pantry-live-fixtures*.json

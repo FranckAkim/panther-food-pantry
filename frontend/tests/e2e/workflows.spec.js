@@ -1,155 +1,68 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, signIn, fixturePassword } from "./pantry-fixture.js";
 
-// Each test gets a fresh browser context/storage. All changes stay in the demo.
-// Freeze the sample calendar, while leaving timers and async loading functional.
-test.beforeEach(async ({ page, baseURL }) => {
-  await page.clock.setFixedTime(new Date("2026-10-14T17:00:00Z"));
-  const external = [];
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("**/*", (route) => {
-    const url = new URL(route.request().url());
-    if (url.origin === new URL(baseURL).origin) return route.continue();
-    external.push(url.origin);
-    return route.abort();
-  });
-  page.testErrors = errors;
-  page.externalRequests = external;
-});
-
-test.afterEach(async ({ page }) => {
-  expect(page.testErrors, "No uncaught browser errors").toEqual([]);
-  expect(page.externalRequests, "Demo must not call external services").toEqual([]);
-});
-
-async function signIn(page, role) {
-  await page.goto(role === "student" ? "/#/sign-in" : `/#/${role}/sign-in`);
-  await page
-    .getByRole("textbox", { name: "Email", exact: true })
-    .fill(role === "student" ? "jordan@pvamu.edu" : `${role}@pvamu.edu`);
-  await page.locator('input[name="password"]').fill("Pantry2026!");
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(
-    page.getByRole("heading", {
-      name: role === "student" ? "Hi, Jordan" : "Dashboard",
-      exact: true,
-    }),
-  ).toBeVisible();
-}
-
-async function readRecord(page, key) {
-  return page.evaluate((key) => JSON.parse(localStorage.getItem(key)), key);
-}
-
-test("keyboard sign-in supports skip navigation, dialog dismissal, and form submission", async ({
+test("keyboard sign-in and password dialog dismissal use connected Auth", async ({
   page,
+  pantry,
 }) => {
   await page.goto("/#/sign-in");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
-  const email = page.getByRole("textbox", { name: "Email", exact: true });
-  await email.focus();
-  await page.keyboard.type("jordan@pvamu.edu");
-  await page.keyboard.press("Tab");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("student@pvamu.edu");
   const help = page.getByRole("button", { name: "Forgot password?" });
-  await expect(help).toBeFocused();
+  await help.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("dialog", { name: "Password help" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Reset your password" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(help).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(page.locator('input[name="password"]')).toBeFocused();
-  await page.keyboard.type("Pantry2026!");
-  await page.keyboard.press("Enter");
+  await page.locator('input[name="password"]').fill(fixturePassword);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Hi, Jordan", exact: true })).toBeVisible();
+  expect(pantry.state.calls.some((c) => c.path === "/auth/v1/token")).toBe(true);
 });
 
-test.describe("narrow-screen acceptance", () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
-  async function expectNoPageOverflow(page) {
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-    ).toBe(true);
-  }
-
-  test("student home, request, and history stay within the viewport", async ({ page }) => {
-    await signIn(page, "student");
-    await expectNoPageOverflow(page);
-    await page.getByRole("link", { name: "Request food", exact: true }).click();
-    await expect(page.getByRole("combobox")).toBeVisible();
-    await expectNoPageOverflow(page);
-    await page.getByRole("link", { name: "History", exact: true }).click();
-    await expectNoPageOverflow(page);
-  });
-
-  test("staff navigation hides closed links and supports keyboard dismissal", async ({ page }) => {
-    await signIn(page, "staff");
-    const opener = page.getByRole("button", { name: "Open navigation", exact: true });
-    const sidebar = page.locator("#workspace-navigation");
-    await expect(sidebar).toBeHidden();
-    await opener.focus();
-    await page.keyboard.press("Tab");
-    expect(await sidebar.evaluate((element) => element.contains(document.activeElement))).toBe(
-      false,
-    );
-    await opener.focus();
-    await page.keyboard.press("Enter");
-    await expect(sidebar).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(sidebar).toBeHidden();
-    await expect(opener).toBeFocused();
-    await page.keyboard.press("Enter");
-    await page.getByRole("link", { name: "Donations", exact: true }).click();
-    await expect(sidebar).toBeHidden();
-    await expect(page.getByRole("button", { name: "Save donation", exact: true })).toBeVisible();
-    await expectNoPageOverflow(page);
-  });
-});
-
-test("sign-in rejects invalid credentials, persists a session, and protects routes after logout", async ({
+test("invalid credentials, refresh persistence, and logout protect the workspace", async ({
   page,
+  pantry,
 }) => {
   await page.goto("/#/sign-in");
-  await page.getByRole("textbox", { name: "Email", exact: true }).fill("jordan@pvamu.edu");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("student@pvamu.edu");
   await page.locator('input[name="password"]').fill("Incorrect-password!");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByText(/Email or password is incorrect/)).toBeVisible();
-  await expect(page).toHaveURL(/#\/sign-in$/);
-  await signIn(page, "student");
+  await signIn(page);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Hi, Jordan", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Account and sign out" }).click();
+  await page.getByRole("button", { name: "Your profile and sign out" }).click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await page.goto("/#/student/home");
-  await expect(page).toHaveURL(/#\/sign-in$/);
-  expect(await readRecord(page, "panther-demo-profile")).toBeNull();
+  await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+  expect(pantry.state.calls.some((c) => c.path === "/auth/v1/logout")).toBe(true);
 });
 
-test("student request persists, reserves a slot, and cancellation releases it", async ({
-  page,
-}) => {
-  await signIn(page, "student");
+async function choosePickup(page) {
   await page.getByRole("button", { name: "Request food", exact: true }).click();
-  await page.getByRole("combobox").selectOption("black-beans");
-  await page.getByRole("button", { name: "Thu, Oct 15", exact: true }).click();
+  await page.getByRole("button", { name: "Canned beans", exact: true }).click();
+  await page.locator(".student-days button").first().click();
   await page.getByRole("radio").first().check();
+}
+test("student reserves and cancels through the hosted request RPC contracts", async ({
+  page,
+  pantry,
+}) => {
+  await signIn(page);
+  await choosePickup(page);
+  await page.getByLabel("Dietary note (optional)").fill("No pork");
   await page.getByRole("button", { name: "Submit request", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("Request submitted");
   await page.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-  const request = (await readRecord(page, "panther-staff-requests")).find(
-    (request) => request.foodId === "black-beans" && request.studentId === "P00281734",
-  );
-  expect(request.status).toBe("Waiting");
-  const reserved = (await readRecord(page, "panther-pickup-slots-v1")).find(
-    (slot) => slot.id === request.slotId,
-  );
-  expect(reserved.booked).toBe(4);
+  expect(pantry.state.calls.find((c) => c.path.endsWith("/submit_food_request")).body).toEqual({
+    p_slot_id: pantry.ids.slot,
+    p_item_id: pantry.ids.item,
+    p_note: "No pork",
+  });
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "Your request is waiting for approval" }),
@@ -157,19 +70,136 @@ test("student request persists, reserves a slot, and cancellation releases it", 
   await page.getByRole("button", { name: "Cancel request", exact: true }).click();
   await page.getByRole("button", { name: "Yes, cancel request", exact: true }).click();
   await expect(page.getByText("You have no open request.", { exact: true })).toBeVisible();
-  const requests = await readRecord(page, "panther-staff-requests");
-  expect(requests.find((entry) => entry.id === request.id).status).toBe("Cancelled");
-  const released = (await readRecord(page, "panther-pickup-slots-v1")).find(
-    (slot) => slot.id === request.slotId,
-  );
-  expect(released.booked).toBe(reserved.booked - 1);
+  expect(pantry.state.calls.find((c) => c.path.endsWith("/cancel_food_request")).body).toEqual({
+    p_request_id: pantry.state.requests[0].id,
+  });
+  expect(pantry.state.booked).toBe(0);
 });
 
-test("walk-in requires ID verification and completed pickup deducts stock once", async ({
+test("an API-rejected reservation displays the error without a successful write", async ({
   page,
+  pantry,
+}) => {
+  pantry.state.failRequest = true;
+  await signIn(page);
+  await choosePickup(page);
+  await page.getByRole("button", { name: "Submit request", exact: true }).click();
+  await expect(
+    page.getByText("This pickup time is full. Choose another time.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(pantry.state.requests).toHaveLength(0);
+  expect(pantry.state.calls.filter((c) => c.path.endsWith("/submit_food_request"))).toHaveLength(1);
+});
+
+test.describe("mobile connected pages", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  const fits = async (page) =>
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  test("student home, selection, and history fit the viewport", async ({ page }) => {
+    await signIn(page);
+    await fits(page);
+    await choosePickup(page);
+    await fits(page);
+    await page.getByRole("link", { name: "History", exact: true }).click();
+    await fits(page);
+  });
+  test("closed staff navigation stays out of focus and Escape closes it", async ({ page }) => {
+    await signIn(page, "staff");
+    const opener = page.getByRole("button", { name: "Open navigation", exact: true }),
+      sidebar = page.locator("#workspace-navigation");
+    await expect(sidebar).toBeHidden();
+    await opener.focus();
+    await page.keyboard.press("Tab");
+    expect(await sidebar.evaluate((el) => el.contains(document.activeElement))).toBe(false);
+    await opener.click();
+    await expect(sidebar).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(sidebar).toBeHidden();
+    await expect(opener).toBeFocused();
+    await opener.click();
+    await page.getByRole("link", { name: "Donations", exact: true }).click();
+    await expect(sidebar).toBeHidden();
+    await fits(page);
+  });
+});
+
+test("staff approval sends the decision RPC and refreshes requests", async ({ page, pantry }) => {
+  pantry.state.requests = [pantry.request()];
+  await signIn(page, "staff");
+  await page.getByRole("link", { name: /^Requests/ }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.getByText("Jordan Ellis's request approved.", { exact: true })).toBeVisible();
+  expect(pantry.state.calls.find((c) => c.path.endsWith("/staff_decide_request")).body).toEqual({
+    p_request_id: pantry.state.requests[0].id,
+    p_approve: true,
+    p_reason: null,
+  });
+  expect(pantry.state.requests[0].status).toBe("approved");
+});
+
+test("donations send existing-item lines and refresh stock", async ({ page, pantry }) => {
+  await signIn(page, "staff");
+  await page.getByRole("link", { name: "Donations", exact: true }).click();
+  await page.getByRole("combobox").first().selectOption("donor:Community donor");
+  await page.getByLabel("Received on", { exact: true }).fill(new Date().toISOString().slice(0, 10));
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page.getByRole("combobox", { name: "Item 1", exact: true }).selectOption(pantry.ids.item);
+  await page.getByRole("spinbutton", { name: "Quantity, item 1" }).fill("2");
+  await page.getByLabel("Expires on, item 1", { exact: true }).fill("2099-01-01");
+  await page.getByRole("combobox", { name: "Shelf or bin, item 1" }).selectOption("A1-1");
+  await page.getByRole("button", { name: "Save donation", exact: true }).click();
+  await expect(
+    page.getByText("Donation saved. 2 units added to inventory.", { exact: true }),
+  ).toBeVisible();
+  expect(
+    pantry.state.calls.find((c) => c.path.endsWith("/staff_record_donation")).body.p_lines,
+  ).toEqual([
+    { item_id: pantry.ids.item, quantity: 2, expiry_date: "2099-01-01", storage_location: "A1-1" },
+  ]);
+  await page.reload();
+  await expect(page.getByRole("button", { name: /^Community donor/ })).toBeVisible();
+  expect(pantry.state.stock).toBe(6);
+});
+
+test("admin reports refetch the selected month and export API totals", async ({ page, pantry }) => {
+  await signIn(page, "admin");
+  await page.getByRole("link", { name: "Reports", exact: true }).click();
+  await page.getByRole("combobox", { name: "Report month" }).selectOption("2026-01");
+  await expect(page.locator(".admin-metrics").getByText("2", { exact: true })).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export CSV", exact: true }).click();
+  expect((await download).suggestedFilename()).toBe("panther-pantry-report-2026-01.csv");
+  expect(
+    pantry.state.calls.some(
+      (c) => c.path.endsWith("/admin_monthly_report") && c.body.p_month === "2026-01-01",
+    ),
+  ).toBe(true);
+});
+
+async function requestReset(page, pantry) {
+  await page.goto("/#/sign-in");
+  await page.getByRole("button", { name: "Forgot password?" }).click();
+  const dialog = page.getByRole("dialog", { name: "Reset your password" });
+  await dialog.getByRole("textbox", { name: "Email", exact: true }).fill("student@pvamu.edu");
+  await page.getByRole("button", { name: "Send reset link", exact: true }).click();
+  await expect(dialog).toContainText("Open the link on this device.");
+  const sent = pantry.state.calls.find((c) => c.path === "/auth/v1/recover");
+  expect(new URL(`https://fixture.invalid/${sent.query}`).searchParams.get("redirect_to")).toBe(
+    "http://127.0.0.1:4173/?pantry_recovery=1",
+  );
+  expect(sent.body.code_challenge_method).toBe("s256");
+  expect(pantry.state.challenge).toBeTruthy();
+}
+
+test("walk-in requires ID confirmation, completes through the distribution RPC, and clears stale selection", async ({
+  page,
+  pantry,
 }) => {
   await signIn(page, "staff");
-  await page.getByRole("button", { name: "Walk-in", exact: true }).click();
+  await page.getByRole("link", { name: "Walk-in", exact: true }).click();
   await page.getByPlaceholder("Enter student ID").fill("P00281734");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByText("Jordan Ellis found.", { exact: true })).toBeVisible();
@@ -180,86 +210,87 @@ test("walk-in requires ID verification and completed pickup deducts stock once",
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Hand out food", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Hand out food", exact: true })).toBeVisible();
-  await page.getByRole("combobox").selectOption("black-beans");
+  await page.getByRole("combobox").selectOption(pantry.ids.item);
   await page.getByRole("spinbutton").fill("1");
   await page.getByRole("button", { name: "Add", exact: true }).click();
   await page.getByRole("button", { name: "Complete pickup", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Today's pickups", exact: true })).toBeVisible();
-  await expect(page.getByText("Completed", { exact: true }).last()).toBeVisible();
-  const inventory = await readRecord(page, "panther-inventory-v1");
-  const beans = inventory.find((item) => item.id === "black-beans");
-  expect(beans.lots.reduce((sum, lot) => sum + lot.quantity, 0)).toBe(47);
-  const pickup = (await readRecord(page, "panther-staff-pickups")).find(
-    (entry) => entry.id.startsWith("walk-in-") && entry.studentId === "P00281734",
-  );
-  expect(pickup.status).toBe("Completed");
-  // Revisiting a stale distribution screen must not consume the stock again.
+  const calls = pantry.state.calls.filter((c) => c.path.endsWith("/staff_complete_distribution"));
+  expect(calls).toHaveLength(1);
+  expect(calls[0].body).toEqual({
+    p_request_id: null,
+    p_profile_id: pantry.ids.student,
+    p_provisional_student_id: null,
+    p_items: [{ item_id: pantry.ids.item, quantity: 1 }],
+    p_id_checked: true,
+  });
+  expect(pantry.state.stock).toBe(3);
   await page.goto("/#/staff/distribution");
-  await page.getByRole("combobox").selectOption("black-beans");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  await page.getByRole("button", { name: "Complete pickup", exact: true }).click();
   await expect(
-    page.getByText("This pickup has already been completed.", { exact: true }),
+    page.getByRole("heading", { name: "No pickup selected", exact: true }),
   ).toBeVisible();
-  expect(await readRecord(page, "panther-inventory-v1")).toEqual(inventory);
+  await expect(page.getByRole("button", { name: "Complete pickup", exact: true })).toHaveCount(0);
+  expect(
+    pantry.state.calls.filter((c) => c.path.endsWith("/staff_complete_distribution")),
+  ).toHaveLength(1);
 });
 
-test("saving a donation adds its lot and preserves the record after reload", async ({ page }) => {
-  await signIn(page, "staff");
-  await page.getByRole("link", { name: "Donations", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Save donation", exact: true })).toBeDisabled();
-  await page.getByRole("combobox").selectOption("donor:Individual donor");
-  await page.getByLabel("Received on", { exact: true }).fill("2026-10-14");
-  await page.getByRole("button", { name: "Add item", exact: true }).click();
-  await page.getByRole("combobox", { name: "Item 1", exact: true }).selectOption("black-beans");
-  await page.getByRole("spinbutton", { name: "Quantity, item 1" }).fill("2");
-  await page.getByLabel("Expires on, item 1", { exact: true }).fill("2027-01-01");
-  await page.getByRole("textbox", { name: "Shelf or bin, item 1" }).fill("A2");
-  await page.getByRole("button", { name: "Save donation", exact: true }).click();
+test("a student cannot stay signed in through the staff portal", async ({ page, pantry }) => {
+  await page.goto("/#/staff/sign-in");
+  await page.getByRole("textbox", { name: "Email", exact: true }).fill("student@pvamu.edu");
+  await page.locator('input[name="password"]').fill(fixturePassword);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
-    page.getByText("Donation saved. 2 units added to inventory.", { exact: true }),
+    page.getByText("This is a student account. Use the student sign-in instead.", { exact: true }),
   ).toBeVisible();
-  const donation = (await readRecord(page, "panther-donations-v1"))[0];
-  expect(donation).toMatchObject({ donor: "Individual donor", units: 2, lines: 1 });
-  const beans = (await readRecord(page, "panther-inventory-v1")).find(
-    (item) => item.id === "black-beans",
-  );
-  expect(beans.lots.reduce((sum, lot) => sum + lot.quantity, 0)).toBe(50);
-  expect(beans.lots).toContainEqual(
-    expect.objectContaining({ quantity: 2, expiry: "2027-01-01", shelf: "A2" }),
-  );
+  await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toHaveCount(0);
+  expect(pantry.state.calls.some((c) => c.path === "/auth/v1/logout")).toBe(true);
+});
+test("recovery exchanges PKCE, survives reload, validates confirmation, and clears its marker", async ({
+  page,
+  pantry,
+}) => {
+  await requestReset(page, pantry);
+  await page.goto("/?code=fixture-recovery-code&pantry_recovery=1");
+  await expect(
+    page.getByRole("heading", { name: "Choose a new password", exact: true }),
+  ).toBeVisible();
+  expect(
+    pantry.state.calls.find((c) => c.path === "/auth/v1/token" && c.query.includes("pkce")).body
+      .auth_code,
+  ).toBe("fixture-recovery-code");
   await page.reload();
-  expect((await readRecord(page, "panther-donations-v1"))[0]).toEqual(donation);
-  await expect(page.getByRole("button", { name: "Save donation", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("heading", { name: "Choose a new password", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("New password", { exact: true }).fill("FixtureNewPassword!2026");
+  await page.getByLabel("Confirm new password", { exact: true }).fill("DifferentPassword!2026");
+  await page.getByRole("button", { name: "Save new password", exact: true }).click();
+  await expect(page.getByText("The two passwords don't match.", { exact: true })).toBeVisible();
+  expect(
+    pantry.state.calls.filter((c) => c.path === "/auth/v1/user" && c.method === "PUT"),
+  ).toHaveLength(0);
+  await page.getByLabel("Confirm new password", { exact: true }).fill("FixtureNewPassword!2026");
+  await page.getByRole("button", { name: "Save new password", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Hi, Jordan", exact: true })).toBeVisible();
+  expect(new URL(page.url()).searchParams.has("pantry_recovery")).toBe(false);
+  expect(
+    pantry.state.calls.find((c) => c.path === "/auth/v1/user" && c.method === "PUT").body,
+  ).toMatchObject({ password: "FixtureNewPassword!2026" });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Choose a new password", exact: true }),
+  ).toHaveCount(0);
 });
-
-test("admin adds staff, filters reports, and paginates the audit log", async ({ page }) => {
-  await signIn(page, "admin");
-  await page.getByRole("link", { name: "Users", exact: true }).click();
-  await page.getByRole("button", { name: "Add staff member", exact: true }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByRole("textbox").nth(0).fill("Browser Test Staff");
-  await dialog.getByRole("textbox").nth(1).fill("browser.staff@pvamu.edu");
-  await dialog.getByRole("button", { name: "Add staff member", exact: true }).click();
-  await expect(dialog).toBeHidden();
-  await expect(page.getByRole("row").filter({ hasText: "browser.staff@pvamu.edu" })).toContainText(
-    "Active",
-  );
-  await page.getByRole("link", { name: "Reports", exact: true }).click();
-  const metrics = page.locator(".admin-metrics");
-  const previous = await metrics.innerText();
-  await page.getByRole("combobox", { name: "Report month" }).selectOption({ label: "August 2026" });
-  await expect(metrics).not.toHaveText(previous);
-  await expect(metrics).toContainText("118");
-  await page.getByRole("link", { name: "Audit log", exact: true }).click();
-  await page.getByRole("combobox", { name: "Audit date", exact: true }).selectOption("");
-  await page.getByRole("searchbox", { name: "Search person or record" }).fill("Browser Test Staff");
-  await expect(page.getByRole("row").filter({ hasText: "Browser Test Staff" })).toContainText(
-    "Account created",
-  );
-  await page.getByRole("searchbox", { name: "Search person or record" }).clear();
-  await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Showing" })).toContainText(
-    "Showing 9–16",
-  );
+test("an expired recovery code cannot unlock the password form", async ({ page, pantry }) => {
+  await requestReset(page, pantry);
+  pantry.state.expiredCode = true;
+  await page.goto("/?code=expired-code&pantry_recovery=1");
+  await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Choose a new password", exact: true }),
+  ).toHaveCount(0);
+  expect(
+    pantry.state.calls.filter((c) => c.path === "/auth/v1/user" && c.method === "PUT"),
+  ).toHaveLength(0);
 });

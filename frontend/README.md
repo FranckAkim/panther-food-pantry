@@ -20,6 +20,29 @@ npm run format       # Format source, tests, configuration, and documentation
 npm run format:check
 ```
 
+### Browser regression tests
+
+```sh
+npm ci
+npx playwright install --with-deps --no-shell chromium
+npm run test:e2e
+```
+
+Playwright builds a separate `dist-e2e` bundle with an explicit fake Supabase URL
+and publishable key. Tests intercept Auth and pantry HTTP calls with per-test
+fixtures, reject every unexpected external request, and never use shared accounts
+or mutate the hosted pantry. They exercise the actual React UI, Supabase SDK,
+request mapping, cache refresh, keyboard/mobile behavior, and recovery callback.
+The PKCE test checks the SDK-generated challenge/verifier, follows a simulated
+authorization-code callback, reloads the reset form, changes a fixture password,
+and checks recovery-marker cleanup; an expired-code test denies the form.
+
+These are controlled browser/API-contract tests, not live database or email
+delivery acceptance. SQL policy/invariant tests run separately in CI. Production
+email delivery and clicking an actual hosted reset email still need acceptance
+testing. The test build does not overwrite `dist` or modify your `.env`.
+On Windows, `PANTRY_BROWSER_CHANNEL=chrome` selects installed Chrome.
+
 ### Demo accounts
 
 The Supabase project has one demo account per role: `demo.student@pvamu.edu`, `demo.staff@pvamu.edu`, and `demo.admin@pvamu.edu`. Their shared password goes in `frontend/.env.development.local` as `VITE_DEMO_PASSWORD`. Vite loads that file only for `npm run dev`, never for production builds, and Git ignores it. When it is present, each sign-in page offers a **Use demo account** button. Ask a teammate for the password; do not commit it.
